@@ -5,17 +5,64 @@ import requests
 
 from data_sources.config import (
     FRED_API_KEY,
-    RAW_FRED_FOLDER,
     PROCESSED_DATA_FOLDER,
+    RAW_FRED_FOLDER,
     create_project_folders,
     validate_configuration,
 )
 
 
+# --------------------------------------------------
+# FRED API configuration
+# --------------------------------------------------
+
 FRED_OBSERVATIONS_URL = (
     "https://api.stlouisfed.org/fred/series/observations"
 )
 
+
+FRED_SERIES = {
+    "cpi": {
+        "series_id": "CPIAUCSL",
+        "column_name": "CPI",
+        "aggregation_method": "avg",
+    },
+    "fed_funds_rate": {
+        "series_id": "FEDFUNDS",
+        "column_name": "Fed Funds Rate",
+        "aggregation_method": "avg",
+    },
+    "treasury_10_year": {
+        "series_id": "GS10",
+        "column_name": "10-Year Treasury Yield",
+        "aggregation_method": "avg",
+    },
+    "unemployment_rate": {
+        "series_id": "UNRATE",
+        "column_name": "Unemployment Rate",
+        "aggregation_method": "avg",
+    },
+    "recession_indicator": {
+        "series_id": "USREC",
+        "column_name": "Recession",
+        "aggregation_method": "avg",
+    },
+    "oil_price": {
+        "series_id": "DCOILWTICO",
+        "column_name": "WTI Oil Price",
+        "aggregation_method": "avg",
+    },
+    "sp500": {
+        "series_id": "SP500",
+        "column_name": "S&P 500",
+        "aggregation_method": "eop",
+    },
+}
+
+
+# --------------------------------------------------
+# Download functions
+# --------------------------------------------------
 
 def download_fred_series(
     series_id: str,
@@ -23,7 +70,8 @@ def download_fred_series(
     aggregation_method: str = "avg",
 ) -> pd.DataFrame:
     """
-    Download one FRED series and return normalized monthly data.
+    Download one FRED series and return normalized
+    monthly data.
 
     Args:
         series_id:
@@ -33,7 +81,7 @@ def download_fred_series(
             Friendly output column name, such as CPI.
 
         aggregation_method:
-            Method FRED should use when converting higher-frequency
+            Method used when FRED converts higher-frequency
             data to monthly frequency.
 
             Supported values include:
@@ -42,7 +90,7 @@ def download_fred_series(
             - eop
 
     Returns:
-        A DataFrame with:
+        A DataFrame containing:
         - Date
         - the requested value column
     """
@@ -99,12 +147,17 @@ def download_fred_series(
     return processed_data
 
 
+# --------------------------------------------------
+# Data cleaning
+# --------------------------------------------------
+
 def normalize_fred_data(
     data: pd.DataFrame,
     column_name: str,
 ) -> pd.DataFrame:
     """
-    Convert raw FRED observations into a clean monthly dataset.
+    Convert raw FRED observations into a clean,
+    monthly dataset.
     """
 
     required_columns = {
@@ -170,12 +223,16 @@ def normalize_fred_data(
     return normalized_data
 
 
+# --------------------------------------------------
+# File saving
+# --------------------------------------------------
+
 def save_raw_fred_data(
     data: pd.DataFrame,
     series_id: str,
 ) -> Path:
     """
-    Save the unprocessed FRED response as a CSV file.
+    Save the original FRED response as a raw CSV file.
     """
 
     create_project_folders()
@@ -198,7 +255,8 @@ def save_processed_fred_data(
     file_name: str,
 ) -> Path:
     """
-    Save normalized FRED data to the processed-data folder.
+    Save normalized FRED data to the processed
+    data folder.
     """
 
     create_project_folders()
@@ -223,6 +281,10 @@ def save_processed_fred_data(
     return output_path
 
 
+# --------------------------------------------------
+# Update functions
+# --------------------------------------------------
+
 def update_single_fred_series(
     series_id: str,
     column_name: str,
@@ -246,34 +308,92 @@ def update_single_fred_series(
 
     print(
         f"Saved {len(data):,} monthly observations "
-        f"to {output_path}."
+        f"to {output_path.name}."
     )
 
     return data
 
 
+def update_all_fred_series() -> dict[str, pd.DataFrame]:
+    """
+    Download and save every configured FRED series.
+
+    Returns:
+        A dictionary of successfully downloaded DataFrames,
+        keyed by their configured file names.
+    """
+
+    updated_series: dict[str, pd.DataFrame] = {}
+    failed_series: list[str] = []
+
+    print("\n" + "=" * 72)
+    print("UPDATING FRED DATA".center(72))
+    print("=" * 72)
+
+    for file_name, settings in FRED_SERIES.items():
+        try:
+            data = update_single_fred_series(
+                series_id=settings["series_id"],
+                column_name=settings["column_name"],
+                file_name=file_name,
+                aggregation_method=settings[
+                    "aggregation_method"
+                ],
+            )
+
+            updated_series[file_name] = data
+
+        except (
+            requests.RequestException,
+            RuntimeError,
+            ValueError,
+            OSError,
+        ) as error:
+            failed_series.append(file_name)
+
+            print(
+                f"Could not update {file_name}: {error}"
+            )
+
+    print("\n" + "-" * 72)
+
+    print(
+        f"Successful updates: {len(updated_series)}"
+    )
+
+    if failed_series:
+        print(
+            f"Failed updates: {len(failed_series)}"
+        )
+
+        for file_name in failed_series:
+            print(f"- {file_name}")
+
+    else:
+        print(
+            "All FRED datasets updated successfully."
+        )
+
+    print("=" * 72)
+
+    return updated_series
+
+
+# --------------------------------------------------
+# Program entry point
+# --------------------------------------------------
+
 def main() -> None:
     """
-    Test the FRED downloader using CPI data.
+    Download and save all configured FRED datasets.
     """
 
     try:
-        cpi_data = update_single_fred_series(
-            series_id="CPIAUCSL",
-            column_name="CPI",
-            file_name="cpi",
-            aggregation_method="avg",
-        )
-
-        print("\nFirst five rows:")
-        print(cpi_data.head())
-
-        print("\nLast five rows:")
-        print(cpi_data.tail())
+        update_all_fred_series()
 
     except requests.Timeout:
         print(
-            "\nThe FRED request timed out. "
+            "\nA FRED request timed out. "
             "Check your internet connection and try again."
         )
 
@@ -312,7 +432,7 @@ def main() -> None:
         OSError,
     ) as error:
         print(
-            f"\nFRED data update failed: {error}"
+            f"\nThe FRED update process failed: {error}"
         )
 
 
