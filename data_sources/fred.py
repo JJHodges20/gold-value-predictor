@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import requests
@@ -9,6 +10,10 @@ from data_sources.config import (
     RAW_FRED_FOLDER,
     create_project_folders,
     validate_configuration,
+)
+from data_sources.validator import (
+    dataset_summary,
+    validate_dataframe,
 )
 
 
@@ -21,41 +26,55 @@ FRED_OBSERVATIONS_URL = (
 )
 
 
-FRED_SERIES = {
+FRED_SERIES: dict[str, dict[str, Any]] = {
     "cpi": {
         "series_id": "CPIAUCSL",
         "column_name": "CPI",
         "aggregation_method": "avg",
+        "minimum": 0,
+        "maximum": None,
     },
     "fed_funds_rate": {
         "series_id": "FEDFUNDS",
         "column_name": "Fed Funds Rate",
         "aggregation_method": "avg",
+        "minimum": 0,
+        "maximum": 30,
     },
     "treasury_10_year": {
         "series_id": "GS10",
         "column_name": "10-Year Treasury Yield",
         "aggregation_method": "avg",
+        "minimum": 0,
+        "maximum": 30,
     },
     "unemployment_rate": {
         "series_id": "UNRATE",
         "column_name": "Unemployment Rate",
         "aggregation_method": "avg",
+        "minimum": 0,
+        "maximum": 100,
     },
     "recession_indicator": {
         "series_id": "USREC",
         "column_name": "Recession",
         "aggregation_method": "avg",
+        "minimum": 0,
+        "maximum": 1,
     },
     "oil_price": {
         "series_id": "DCOILWTICO",
         "column_name": "WTI Oil Price",
         "aggregation_method": "avg",
+        "minimum": None,
+        "maximum": None,
     },
     "sp500": {
         "series_id": "SP500",
         "column_name": "S&P 500",
         "aggregation_method": "eop",
+        "minimum": 0,
+        "maximum": None,
     },
 }
 
@@ -82,17 +101,27 @@ def download_fred_series(
 
         aggregation_method:
             Method used when FRED converts higher-frequency
-            data to monthly frequency.
+            observations to monthly frequency.
 
-            Supported values include:
+            Common values:
             - avg
             - sum
             - eop
 
     Returns:
-        A DataFrame containing:
+        A normalized DataFrame containing:
         - Date
-        - the requested value column
+        - the configured value column
+
+    Raises:
+        requests.RequestException:
+            If the HTTP request fails.
+
+        ValueError:
+            If FRED returns no observations or malformed data.
+
+        RuntimeError:
+            If project configuration is invalid.
     """
 
     validate_configuration()
@@ -108,7 +137,7 @@ def download_fred_series(
     }
 
     print(
-        f"Downloading {column_name} "
+        f"\nDownloading {column_name} "
         f"from FRED ({series_id})..."
     )
 
@@ -120,7 +149,13 @@ def download_fred_series(
 
     response.raise_for_status()
 
-    response_data = response.json()
+    try:
+        response_data = response.json()
+    except requests.JSONDecodeError as error:
+        raise ValueError(
+            f"FRED returned an invalid JSON response "
+            f"for {series_id}."
+        ) from error
 
     observations = response_data.get(
         "observations",
@@ -128,15 +163,23 @@ def download_fred_series(
     )
 
     if not observations:
-        raise ValueError(
-            f"FRED returned no observations for {series_id}."
+        error_message = response_data.get(
+            "error_message",
+            f"FRED returned no observations for {series_id}.",
         )
+
+        raise ValueError(error_message)
 
     raw_data = pd.DataFrame(observations)
 
-    save_raw_fred_data(
+    raw_output_path = save_raw_fred_data(
         data=raw_data,
         series_id=series_id,
+    )
+
+    print(
+        f"Saved raw response to "
+        f"{raw_output_path.name}."
     )
 
     processed_data = normalize_fred_data(
@@ -158,6 +201,26 @@ def normalize_fred_data(
     """
     Convert raw FRED observations into a clean,
     monthly dataset.
+
+    Invalid dates and nonnumeric values are removed.
+    Dates are converted to the first day of each month.
+    Duplicate months are resolved by keeping the final
+    observation for that month.
+
+    Args:
+        data:
+            Raw FRED observations.
+
+        column_name:
+            Friendly name for the processed numeric column.
+
+    Returns:
+        A cleaned monthly DataFrame.
+
+    Raises:
+        ValueError:
+            If required columns are missing or no valid rows
+            remain after cleaning.
     """
 
     required_columns = {
@@ -233,6 +296,16 @@ def save_raw_fred_data(
 ) -> Path:
     """
     Save the original FRED response as a raw CSV file.
+
+    Args:
+        data:
+            Raw FRED observations.
+
+        series_id:
+            FRED series identifier.
+
+    Returns:
+        The path of the saved raw CSV file.
     """
 
     create_project_folders()
@@ -255,8 +328,20 @@ def save_processed_fred_data(
     file_name: str,
 ) -> Path:
     """
-    Save normalized FRED data to the processed
-    data folder.
+    Save validated FRED data to the processed folder.
+
+    The in-memory DataFrame keeps full datetime values.
+    The saved CSV stores dates in YYYY-MM format.
+
+    Args:
+        data:
+            Validated FRED data.
+
+        file_name:
+            Output file name without the .csv extension.
+
+    Returns:
+        The path of the saved processed CSV file.
     """
 
     create_project_folders()
@@ -290,9 +375,34 @@ def update_single_fred_series(
     column_name: str,
     file_name: str,
     aggregation_method: str = "avg",
+    minimum: float | None = None,
+    maximum: float | None = None,
 ) -> pd.DataFrame:
     """
-    Download, normalize, and save one FRED series.
+    Download, normalize, validate, summarize, and save
+    one FRED series.
+
+    Args:
+        series_id:
+            FRED series identifier.
+
+        column_name:
+            Friendly processed column name.
+
+        file_name:
+            Processed CSV file name without an extension.
+
+        aggregation_method:
+            FRED monthly aggregation method.
+
+        minimum:
+            Optional minimum allowed value.
+
+        maximum:
+            Optional maximum allowed value.
+
+    Returns:
+        The validated processed DataFrame.
     """
 
     data = download_fred_series(
@@ -301,14 +411,48 @@ def update_single_fred_series(
         aggregation_method=aggregation_method,
     )
 
+    validate_dataframe(
+        data=data,
+        value_column=column_name,
+        minimum=minimum,
+        maximum=maximum,
+    )
+
+    summary = dataset_summary(
+        data=data,
+        value_column=column_name,
+    )
+
     output_path = save_processed_fred_data(
         data=data,
         file_name=file_name,
     )
 
+    first_date = summary[
+        "first_date"
+    ].strftime("%Y-%m")
+
+    last_date = summary[
+        "last_date"
+    ].strftime("%Y-%m")
+
     print(
-        f"Saved {len(data):,} monthly observations "
+        f"Validation passed for {column_name}."
+    )
+
+    print(
+        f"Saved {summary['rows']:,} monthly observations "
         f"to {output_path.name}."
+    )
+
+    print(
+        f"Date range: {first_date} through {last_date}."
+    )
+
+    print(
+        f"Value range: "
+        f"{summary['minimum_value']:,.4f} through "
+        f"{summary['maximum_value']:,.4f}."
     )
 
     return data
@@ -318,13 +462,16 @@ def update_all_fred_series() -> dict[str, pd.DataFrame]:
     """
     Download and save every configured FRED series.
 
+    One failed series does not stop the remaining series
+    from being processed.
+
     Returns:
-        A dictionary of successfully downloaded DataFrames,
-        keyed by their configured file names.
+        A dictionary of successfully updated DataFrames,
+        keyed by configured file name.
     """
 
     updated_series: dict[str, pd.DataFrame] = {}
-    failed_series: list[str] = []
+    failed_series: dict[str, str] = {}
 
     print("\n" + "=" * 72)
     print("UPDATING FRED DATA".center(72))
@@ -339,6 +486,8 @@ def update_all_fred_series() -> dict[str, pd.DataFrame]:
                 aggregation_method=settings[
                     "aggregation_method"
                 ],
+                minimum=settings["minimum"],
+                maximum=settings["maximum"],
             )
 
             updated_series[file_name] = data
@@ -349,29 +498,43 @@ def update_all_fred_series() -> dict[str, pd.DataFrame]:
             ValueError,
             OSError,
         ) as error:
-            failed_series.append(file_name)
+            failed_series[file_name] = str(error)
 
             print(
-                f"Could not update {file_name}: {error}"
+                f"\nCould not update {file_name}: {error}"
             )
 
     print("\n" + "-" * 72)
+    print("FRED UPDATE SUMMARY".center(72))
+    print("-" * 72)
 
     print(
         f"Successful updates: {len(updated_series)}"
     )
 
-    if failed_series:
-        print(
-            f"Failed updates: {len(failed_series)}"
-        )
+    print(
+        f"Failed updates: {len(failed_series)}"
+    )
 
-        for file_name in failed_series:
-            print(f"- {file_name}")
+    if updated_series:
+        print("\nSuccessful datasets:")
+
+        for file_name, data in updated_series.items():
+            print(
+                f"- {file_name}: {len(data):,} rows"
+            )
+
+    if failed_series:
+        print("\nFailed datasets:")
+
+        for file_name, error_message in failed_series.items():
+            print(
+                f"- {file_name}: {error_message}"
+            )
 
     else:
         print(
-            "All FRED datasets updated successfully."
+            "\nAll FRED datasets updated successfully."
         )
 
     print("=" * 72)
@@ -385,7 +548,8 @@ def update_all_fred_series() -> dict[str, pd.DataFrame]:
 
 def main() -> None:
     """
-    Download and save all configured FRED datasets.
+    Download, validate, and save all configured
+    FRED datasets.
     """
 
     try:
