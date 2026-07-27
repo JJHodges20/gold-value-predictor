@@ -1,6 +1,9 @@
+from io import StringIO
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
+import requests
 
 from data_sources.config import (
     PROCESSED_DATA_FOLDER,
@@ -20,6 +23,86 @@ from data_sources.validator import (
 GOLD_DATE_COLUMN = "Date"
 GOLD_VALUE_COLUMN = "Gold Price"
 
+GOLD_SOURCE: dict[str, Any] = {
+    "name": "DataHub Gold Prices",
+    "url": (
+        "https://datahub.io/core/gold-prices/"
+        "_r/-/data/monthly.csv"
+    ),
+    "date_column": "Date",
+    "price_column": "Price",
+    "raw_file_name": "gold_raw.csv",
+    "processed_file_name": "gold_price.csv",
+}
+
+
+# --------------------------------------------------
+# Downloading
+# --------------------------------------------------
+
+def download_gold_data(
+    url: str = GOLD_SOURCE["url"],
+) -> pd.DataFrame:
+    """
+    Download the live monthly gold-price CSV.
+
+    Args:
+        url:
+            URL of the source CSV file.
+
+    Returns:
+        The downloaded source data as a DataFrame.
+
+    Raises:
+        requests.RequestException:
+            If the network request fails.
+
+        ValueError:
+            If the response cannot be parsed as CSV or
+            contains no observations.
+    """
+
+    create_project_folders()
+
+    print(
+        f"\nDownloading gold prices from "
+        f"{GOLD_SOURCE['name']}..."
+    )
+
+    response = requests.get(
+        url,
+        timeout=30,
+    )
+
+    response.raise_for_status()
+
+    if not response.text.strip():
+        raise ValueError(
+            "The gold-price source returned an empty response."
+        )
+
+    try:
+        raw_data = pd.read_csv(
+            StringIO(response.text)
+        )
+
+    except (
+        pd.errors.EmptyDataError,
+        pd.errors.ParserError,
+        UnicodeDecodeError,
+    ) as error:
+        raise ValueError(
+            "The downloaded gold-price data could not "
+            "be parsed as CSV."
+        ) from error
+
+    if raw_data.empty:
+        raise ValueError(
+            "The downloaded gold-price dataset is empty."
+        )
+
+    return raw_data
+
 
 # --------------------------------------------------
 # Data normalization
@@ -34,8 +117,8 @@ def normalize_gold_data(
     Normalize raw gold-price data into one monthly
     observation per row.
 
-    Daily or irregular observations are converted into
-    monthly average prices.
+    Daily, monthly, or irregular observations are converted
+    into monthly average prices.
 
     Args:
         data:
@@ -152,10 +235,10 @@ def normalize_gold_data(
 
 def save_raw_gold_data(
     data: pd.DataFrame,
-    file_name: str = "gold_raw.csv",
+    file_name: str = GOLD_SOURCE["raw_file_name"],
 ) -> Path:
     """
-    Save the untouched source data to the raw gold folder.
+    Save the downloaded source data to the raw gold folder.
 
     Args:
         data:
@@ -182,7 +265,9 @@ def save_raw_gold_data(
 
 def save_processed_gold_data(
     data: pd.DataFrame,
-    file_name: str = "gold_price.csv",
+    file_name: str = GOLD_SOURCE[
+        "processed_file_name"
+    ],
 ) -> Path:
     """
     Save validated monthly gold-price data.
@@ -221,7 +306,7 @@ def save_processed_gold_data(
 
 
 # --------------------------------------------------
-# Processing
+# Processing and updating
 # --------------------------------------------------
 
 def process_gold_data(
@@ -230,8 +315,8 @@ def process_gold_data(
     source_value_column: str = "price",
 ) -> pd.DataFrame:
     """
-    Normalize, validate, summarize, and save raw
-    gold-price data.
+    Save, normalize, validate, summarize, and process
+    raw gold-price data.
 
     Args:
         raw_data:
@@ -303,3 +388,83 @@ def process_gold_data(
     )
 
     return normalized_data
+
+
+def update_gold_data() -> pd.DataFrame:
+    """
+    Download, normalize, validate, and save the live
+    gold-price dataset.
+
+    Returns:
+        Validated monthly gold-price data.
+    """
+
+    raw_data = download_gold_data()
+
+    return process_gold_data(
+        raw_data=raw_data,
+        source_date_column=GOLD_SOURCE[
+            "date_column"
+        ],
+        source_value_column=GOLD_SOURCE[
+            "price_column"
+        ],
+    )
+
+
+# --------------------------------------------------
+# Program entry point
+# --------------------------------------------------
+
+def main() -> None:
+    """
+    Run the complete gold-price update pipeline.
+    """
+
+    print("\n" + "=" * 72)
+    print("UPDATING GOLD DATA".center(72))
+    print("=" * 72)
+
+    try:
+        update_gold_data()
+
+    except requests.Timeout:
+        print(
+            "\nThe gold-price request timed out. "
+            "Check your internet connection and try again."
+        )
+
+    except requests.HTTPError as error:
+        print(
+            "\nThe gold-price source returned an HTTP error."
+        )
+
+        if error.response is not None:
+            print(
+                f"Status code: "
+                f"{error.response.status_code}"
+            )
+
+    except requests.RequestException as error:
+        print(
+            f"\nThe gold-price download failed: {error}"
+        )
+
+    except (
+        ValueError,
+        OSError,
+    ) as error:
+        print(
+            f"\nThe gold update process failed: {error}"
+        )
+
+    else:
+        print(
+            "\nGold data updated successfully."
+        )
+
+    print("=" * 72)
+
+
+if __name__ == "__main__":
+    main()
