@@ -42,6 +42,11 @@ def prepare_price_series(
             If the requested column is not numeric.
     """
 
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError(
+            "data must be a pandas DataFrame."
+    )
+
     if data.empty:
         raise ValueError(
             "Cannot prepare a price series from an empty dataset."
