@@ -9,7 +9,12 @@ import pandas as pd
 # --------------------------------------------------
 
 PROJECT_FOLDER = Path(__file__).resolve().parent
-CSV_FILE = PROJECT_FOLDER / "gold_price.csv"
+CSV_FILE = (
+    PROJECT_FOLDER
+    / "data"
+    / "processed"
+    / "gold_price.csv"
+)
 CHARTS_FOLDER = PROJECT_FOLDER / "charts"
 
 
