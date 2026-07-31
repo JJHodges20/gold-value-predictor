@@ -1,21 +1,89 @@
 # Gold Value Predictor
-## Development Log
+# Development Log
 
 ---
 
 # Project Information
 
-Project Name:
+## Project Name
+
 Gold Value Predictor
 
-Purpose:
-Develop a professional-quality financial analytics application for analyzing historical gold prices, inflation-adjusted values, rolling statistics, returns, and hypothetical future growth scenarios.
+## Version
 
-Primary Language:
-Python
+1.0
 
-Architecture:
-Layered (Data → Analytics → Visualization → Interface)
+## Primary Language
+
+Python 3.14+
+
+## Project Type
+
+Financial Analytics Application
+
+## Purpose
+
+Gold Value Predictor is a professional-quality financial analytics application designed to analyze historical gold prices, compare nominal and inflation-adjusted values, evaluate historical risk and return characteristics, generate hypothetical future growth scenarios, and present results through reusable visualizations and a consolidated analytics dashboard.
+
+The project emphasizes clean software architecture, reusable analytics, comprehensive testing, and maintainable code over rapid feature development.
+
+---
+
+# Project Goals
+
+The primary goals of Version 1.0 were:
+
+- Build a reusable financial analytics engine.
+- Separate business logic from visualization.
+- Eliminate duplicated calculations.
+- Produce publication-quality charts.
+- Create a professional analytics dashboard.
+- Maintain extensive automated test coverage.
+- Establish an architecture capable of supporting future desktop, web, and API interfaces.
+
+---
+
+# Core Design Philosophy
+
+Throughout development, one principle guided every major architectural decision:
+
+> **Analytics owns the calculations.**
+>
+> **Visualization owns presentation.**
+>
+> **Interfaces own user interaction.**
+
+No mathematical calculation should exist inside a chart.
+
+No visualization should duplicate analytical logic.
+
+Every layer should remain independently reusable.
+
+---
+
+# Architecture
+
+The application follows a layered architecture.
+
+```
+                Data Sources
+                      │
+                      ▼
+             Data Processing
+                      │
+                      ▼
+               Analytics Layer
+                      │
+                      ▼
+           Visualization Layer
+                      │
+                      ▼
+        Dashboard / CLI / Exports
+```
+
+Each layer has a single responsibility.
+
+This allows future interfaces (desktop GUI, web dashboard, REST API, etc.) to reuse the same analytics without modification.
 
 ---
 
@@ -23,458 +91,396 @@ Layered (Data → Analytics → Visualization → Interface)
 
 ---
 
-## Session 1
-### Initial Project Planning
+## Phase 1 — Foundation
 
-Goals
+Completed
 
-- Define project vision.
-- Establish layered architecture.
-- Separate analytics from visualization.
-- Build reusable modules instead of one large script.
+✔ Project architecture
+
+✔ Repository structure
+
+✔ Analytics package
+
+✔ Visualization package
+
+✔ Testing framework
 
 Major Decisions
 
-✔ Analytics performs calculations.
-
-✔ Visualization only plots.
-
-✔ CLI should consume analytics.
-
-✔ Future GUI should reuse analytics without modification.
-
-Result
-
-Project architecture established.
+- Modular package layout
+- Analytics-first architecture
+- Shared helper functions
+- Consistent testing strategy
 
 ---
 
-## Session 2
-### Historical Price Analysis
+## Phase 2 — Historical Price Analysis
 
 Completed
+
+Features
 
 ✔ Historical price chart
 
 ✔ Recent price chart
 
+✔ Shared chart formatting
+
+✔ Currency formatting
+
 Highlights
 
-- Standardized chart helpers.
-- Shared formatting functions.
-- Currency axis formatting.
-- Consistent figure sizing.
-
-Files
-
-visualizations/charts.py
-
-Status
-
-Complete
+- Reusable formatting helpers
+- Shared figure sizing
+- Consistent styling
 
 ---
 
-## Session 3
-### Inflation Analysis
+## Phase 3 — Inflation Analysis
 
 Completed
 
-✔ Inflation-adjusted prices
+Features
+
+✔ Inflation-adjusted pricing
 
 ✔ Nominal vs. inflation-adjusted comparison
 
-Major Improvement
+Major Improvements
 
-Refactored charts to use
+Removed duplicated inflation calculations from visualization layer.
 
+Charts now reuse:
+
+```
 calculate_real_price()
-
-instead of duplicating inflation calculations.
-
-Bug Fixed
-
-NameError
-
-calculate_real_price
-
-resolved by importing the analytics function.
-
-Files
-
-analytics/inflation.py
-
-visualizations/charts.py
-
-Status
-
-Complete
-
----
-
-## Session 4
-### Return Analysis
-
-Completed
-
-✔ Monthly Returns
-
-✔ Cumulative Returns
-
-✔ Annual Returns
-
-✔ Return Distribution
-
-Major Improvement
-
-Charts now consume
-
-analytics/returns.py
-
-instead of recalculating returns.
-
-Bug Fixed
-
-Incorrect helper name
-
-format_percent_axis()
-
-changed to
-
-format_percentage_axis()
-
-Additional Improvement
-
-Extended
-
-format_percentage_axis()
-
-to support both X and Y axes.
-
-Status
-
-Complete
-
----
-
-## Session 5
-### Rolling Analysis
-
-Completed
-
-✔ Rolling Average
-
-✔ Rolling Volatility
-
-✔ Rolling Return
-
-✔ Rolling Drawdown
-
-✔ Rolling High / Low
-
-Architecture Improvements
-
-Rolling calculations remain entirely inside
-
-analytics/rolling.py
-
-Charts only visualize returned Series.
-
-Lessons Learned
-
-dropna()
-
-is used only for visualization.
-
-Analytics continues returning the complete Series.
-
-Status
-
-Complete
-
----
-
-## Session 6
-### Forecasting Module
-
-Current Progress
-
-Section 7.1 completed.
-
-Completed
-
-✔ Module imports
-
-✔ Constants
-
-✔ Validation helpers
-
-Functions Added
-
-validate_years()
-
-validate_growth_rate()
-
-validate_months_per_year()
-
-Validation Tests
-
-Passed
-
-Module compiles successfully.
-
-Current Status
-
-Ready for Section 7.2
-
----
-
-# Current Architecture
-
-```
-Data
-        ↓
-Analytics
-        ↓
-Visualizations
-        ↓
-CLI / Dashboard
 ```
 
 ---
 
-# Current Module Status
+## Phase 4 — Return Analytics
 
-## Data
+Completed
 
-✔ Complete
+Features
 
----
+✔ Monthly returns
 
-## Analytics
+✔ Annual returns
 
-loader.py
+✔ Return distribution
 
-✔ Complete
+✔ Cumulative returns
 
-returns.py
+Highlights
 
-✔ Complete
-
-rolling.py
-
-✔ Complete
-
-inflation.py
-
-✔ Complete
-
-forecasting.py
-
-🚧 In Progress
-
-Current completion:
-
-Approximately 15%
+Charts consume reusable analytics instead of recalculating returns internally.
 
 ---
 
-## Visualizations
+## Phase 5 — Risk Analytics
 
-Historical Charts
+Completed
 
-✔ Complete
+Features
 
-Inflation Charts
+✔ Annualized volatility
 
-✔ Complete
+✔ Maximum drawdown
 
-Return Charts
+✔ Rolling volatility
 
-✔ Complete
+✔ Rolling drawdown
 
-Rolling Charts
+Highlights
 
-✔ Complete
-
-Forecast Charts
-
-Not started
+Risk calculations became reusable throughout the project.
 
 ---
 
-# Known Improvements
+## Phase 6 — Forecasting Engine
 
-None currently.
+Completed
+
+Features
+
+✔ Compound-growth projections
+
+✔ Forecast Series generation
+
+✔ Scenario forecasts
+
+✔ Forecast summaries
+
+✔ Forecast charts
+
+Important Design Decision
+
+Forecasts represent deterministic hypothetical growth assumptions.
+
+They are **not** predictive models.
+
+---
+
+## Phase 7 — Styling System
+
+Completed
+
+Major Achievement
+
+The visualization layer was completely centralized.
+
+Created reusable styling modules including:
+
+- Colors
+- Typography
+- Formatting
+- Constants
+- Annotation helpers
+
+Benefits
+
+Every chart now shares:
+
+- typography
+- spacing
+- colors
+- formatting
+- annotations
+- legends
+
+through centralized helper functions.
+
+---
+
+## Phase 8 — Export Utilities
+
+Completed
+
+Features
+
+✔ PNG export
+
+✔ SVG export
+
+✔ Batch export
+
+✔ Automated export testing
+
+---
+
+## Phase 9 — Dashboard Framework
+
+Completed
+
+Features
+
+✔ Dashboard layout engine
+
+✔ Dashboard configuration
+
+✔ Dashboard validation
+
+✔ Dashboard summary metrics
+
+✔ Price panels
+
+✔ Return panels
+
+✔ Rolling analysis panels
+
+✔ Forecast panel
+
+Dashboard Includes
+
+- Summary KPIs
+- Historical Price
+- Recent Price
+- Inflation Comparison
+- Monthly Returns
+- Annual Returns
+- Rolling Volatility
+- Rolling Drawdown
+- Hypothetical Forecast
+
+---
+
+## Phase 10 — Dashboard Integration
+
+Completed
+
+Major Achievement
+
+The dashboard became a reusable consumer of the analytics layer rather than an independent implementation.
+
+Every panel now reuses existing analytics.
+
+No calculations are duplicated.
+
+---
+
+# Testing
+
+Version 1.0 maintains extensive automated testing across the entire project.
+
+Coverage includes:
+
+✔ Data loading
+
+✔ Validation
+
+✔ Inflation
+
+✔ Returns
+
+✔ Risk
+
+✔ Rolling analytics
+
+✔ Forecasting
+
+✔ Styling
+
+✔ Dashboard
+
+✔ Export utilities
+
+✔ Formatting
+
+✔ Visualization
+
+The project is designed so new features are accompanied by corresponding automated tests whenever practical.
 
 ---
 
 # Lessons Learned
 
-## Analytics owns the math.
+## Separation of Responsibilities
 
-Visualization owns presentation.
+One of the largest architectural improvements during development was moving all calculations into the analytics layer.
 
-Never duplicate calculations.
-
----
-
-## Return Series
-
-Charts should plot
-
-dropna()
-
-instead of modifying analytics.
+This significantly reduced duplicated logic and simplified future maintenance.
 
 ---
 
-## Forecast Philosophy
+## Reusable Components
 
-Forecasts are deterministic.
+Reusable helper functions proved more valuable than initially expected.
 
-They represent hypothetical growth assumptions.
-
-They are NOT predictions.
-
-Avoid statistical confidence intervals until probabilistic forecasting models exist.
+Shared formatting, annotation, validation, and styling functions dramatically reduced duplicated code.
 
 ---
 
-# Remaining Roadmap
+## Testing Early
 
-## Section 7
+Writing tests alongside development prevented regressions while major architectural refactoring occurred.
 
-Forecast Analytics
-
-Current Step
-
-➡ Section 7.2
-
-Remaining
-
-project_future_value()
-
-generate_forecast_series()
-
-Scenario Forecasts
-
-Forecast Summary
-
-Forecast Charts
+Many bugs were discovered within minutes because of comprehensive test coverage.
 
 ---
 
-## Section 8
+## Incremental Development
 
-Export Utilities
-
-PNG export
-
-Batch export
-
-High-resolution output
+Building small reusable components first allowed increasingly sophisticated features to be assembled with minimal additional complexity.
 
 ---
 
-## Section 9
+# Current Features
 
-Chart Polish
+Version 1.0 includes:
 
-Unified styling
+✔ Historical analysis
 
-Improved annotations
+✔ Inflation analysis
 
-Professional typography
+✔ Return analysis
 
-Optional dark theme
+✔ Risk analysis
 
----
+✔ Rolling statistics
 
-## Section 10
+✔ Hypothetical forecasting
 
-Dashboard
+✔ Professional visualization system
 
-Generate complete dashboard
+✔ Export system
 
-Single function call
+✔ Integrated dashboard
 
-Reusable for:
+✔ Centralized styling
 
-CLI
-
-Desktop
-
-Web
-
-API
+✔ Extensive testing
 
 ---
 
-# Future Ideas
+# Current Limitations
 
-Potential additions after Version 1.0
+Version 1.0 intentionally excludes:
 
-Monte Carlo simulations
+- Live data refresh
+- Interactive forecasting
+- Machine learning forecasting
+- Monte Carlo simulations
+- ARIMA models
+- Prophet models
+- Desktop GUI
+- Web interface
+- Portfolio comparison
 
-ARIMA forecasting
-
-Prophet
-
-Machine Learning forecasting
-
-Bayesian confidence intervals
-
-Portfolio comparison
-
-Inflation comparison dashboard
-
-Live gold price integration
-
-Economic indicator overlays
+These are reserved for future versions.
 
 ---
 
-# End of Current Session
+# Planned Version 2.0
 
-Last Completed Section
+Planned improvements include:
 
-Forecasting 7.1
+- User-configurable forecast assumptions
+- Interactive dashboard controls
+- Automatic dataset refresh
+- Live market data integration
+- Monte Carlo simulation
+- ARIMA forecasting
+- Prophet forecasting
+- Machine learning forecasting
+- Portfolio comparison tools
+- Economic indicator overlays
+- Desktop application
+- Web dashboard
+- REST API
 
-Next Objective
+---
 
-Forecasting 7.2
+# Project Status
 
-Estimated Overall Completion
+Version 1.0 represents a feature-complete financial analytics application.
 
-≈ 75%
+The core architecture is stable.
 
-The core architecture is complete.
+Analytics are reusable.
 
-Remaining work focuses primarily on extending functionality, improving usability, and polishing presentation rather than redesigning the system.
+Visualizations are centralized.
 
-## Forecasting and Forecast Charts
+Testing is comprehensive.
 
-Completed:
+Future development will focus primarily on expanding functionality rather than redesigning the underlying system.
 
-- Core compound-growth projections
-- Monthly forecast Series
-- Default and custom scenario forecasts
-- Forecast summary generation
-- Forecast console reporting
-- Historical-plus-forecast chart
-- Scenario comparison chart
-- Forecasting test coverage
-- Forecast-chart test coverage
+---
 
-Validation:
+# Final Notes
 
-- Forecast module compiles
-- Forecast previews render
-- Forecasting tests pass
-- Chart tests pass
-- Full test suite passes
+Gold Value Predictor was developed as both a financial analytics platform and a software engineering exercise.
 
-Next:
+Equal emphasis was placed on:
 
-- Section 8.1 — Export configuration and validation
+- software architecture
+- maintainability
+- testing
+- documentation
+- visualization quality
+
+The resulting application demonstrates a modular design intended to remain extensible well beyond Version 1.0.
+
+---
+
+**End of Development Log**

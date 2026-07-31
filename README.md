@@ -1,48 +1,315 @@
-Gold Value Predictor
+# Gold Value Predictor
 
-Gold Value Predictor is a Python-based data analysis project that explores historical gold price data through summary statistics, date-range comparisons, visual charts, and simple future-value projections.
+A professional-quality financial analytics application built in Python for exploring historical gold prices, inflation-adjusted values, returns, risk metrics, hypothetical forecasting, and interactive dashboard visualizations.
 
-The application allows users to:
+Gold Value Predictor was developed as both a financial analytics platform and a software engineering project, emphasizing clean architecture, reusable analytics, centralized visualization, and comprehensive automated testing.
 
-View a complete historical summary of gold prices.
-Analyze a selected date range.
-Compare prices from two different months.
-Review total growth, average monthly change, and compound annual growth rate.
-Generate charts for historical prices, recent performance, monthly percentage changes, and rolling averages.
-Create hypothetical future-value projections using historical average growth rates.
-Important Disclaimer
+---
 
-This project is intended for educational and experimental purposes only.
+# Features
 
-The projection feature does not reliably predict future gold prices. It simply applies historical average growth rates to the latest available price using a mathematical compounding formula.
+## Historical Analysis
 
-Gold prices are influenced by many unpredictable factors, including:
+- Analyze nearly two centuries of historical gold prices.
+- View complete historical and recent price trends.
+- Calculate long-term growth statistics.
+- Compare prices across custom date ranges.
 
-Inflation and interest rates.
-Currency values.
-Global conflicts and political instability.
-Central bank activity.
-Mining production and supply.
-Investor sentiment.
-Economic recessions and financial crises.
-Changes in demand for jewelry, technology, and investment products.
+---
 
-Historical performance does not guarantee future results. A long-term average cannot account for sudden market events, changing economic conditions, or future price volatility.
+## Inflation Analysis
 
-Any projected value produced by this program should be treated as a hypothetical scenario, not as financial advice, an investment recommendation, or a realistic market forecast.
+- Compare nominal and inflation-adjusted gold prices.
+- Visualize the impact of inflation over time.
+- Analyze purchasing-power changes alongside market prices.
 
-Purpose of the Project
+---
 
-The main purpose of Gold Value Predictor is to practice and demonstrate skills in:
+## Return Analytics
 
-Python programming.
-Data cleaning and validation.
-Pandas data analysis.
-Percentage-change calculations.
-Compound growth calculations.
-User input and menu design.
-Error handling.
-Matplotlib data visualization.
-Organizing a small software project.
+- Monthly returns
+- Annual returns
+- Return distributions
+- Compound Annual Growth Rate (CAGR)
 
-The project may later be expanded with additional statistics, improved charts, inflation-adjusted prices, automated testing, or machine-learning experiments. Any future prediction features should still be presented with clear limitations and should not be treated as dependable financial forecasting.
+---
+
+## Risk Analytics
+
+- Annualized volatility
+- Maximum drawdown
+- Rolling volatility
+- Rolling drawdown
+
+---
+
+## Forecasting
+
+Generate hypothetical compound-growth scenarios using configurable assumptions.
+
+Forecast features include:
+
+- Configurable annual growth rate
+- Configurable forecast period
+- Historical context window
+- Scenario projections
+- Dashboard forecast visualization
+
+> **Forecasts are deterministic mathematical scenarios, not market predictions.**
+
+---
+
+## Professional Visualizations
+
+Version 1.0 includes publication-quality charts for:
+
+- Historical Gold Price
+- Recent Gold Price
+- Nominal vs. Inflation-Adjusted Price
+- Monthly Returns
+- Annual Returns
+- Return Distribution
+- Rolling Volatility
+- Rolling Drawdown
+- Forecast Projection
+
+All charts share a centralized styling system for consistent colors, typography, spacing, and formatting.
+
+---
+
+## Analytics Dashboard
+
+The integrated dashboard combines multiple analyses into a single view.
+
+Dashboard panels include:
+
+- Summary KPIs
+- Historical Gold Price
+- Recent Gold Price
+- Inflation Comparison
+- Monthly Returns
+- Annual Returns
+- Rolling Volatility
+- Rolling Drawdown
+- Hypothetical Forecast
+
+---
+
+## Export Utilities
+
+Generate high-quality figures in multiple formats.
+
+Supported exports:
+
+- PNG
+- SVG
+
+Batch export is fully supported.
+
+---
+
+## Automated Testing
+
+The project includes extensive automated testing covering:
+
+- Data loading
+- Validation
+- Inflation analytics
+- Return analytics
+- Risk analytics
+- Rolling analytics
+- Forecasting
+- Visualization
+- Dashboard
+- Styling
+- Export utilities
+
+---
+
+# Project Architecture
+
+Gold Value Predictor follows a layered architecture.
+
+```
+               Data Sources
+                     │
+                     ▼
+             Data Processing
+                     │
+                     ▼
+              Analytics Layer
+                     │
+                     ▼
+           Visualization Layer
+                     │
+                     ▼
+        Dashboard / CLI / Exports
+```
+
+The project is intentionally designed so calculations, visualization, and user interfaces remain independent and reusable.
+
+---
+
+# Technologies Used
+
+- Python 3.14+
+- Pandas
+- NumPy
+- Matplotlib
+- Pytest
+
+---
+
+# Installation
+
+Clone the repository.
+
+Create a virtual environment.
+
+```powershell
+python -m venv venv
+```
+
+Activate the environment.
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+Install project dependencies.
+
+```powershell
+pip install -r requirements.txt
+```
+
+---
+
+# Updating Data
+
+Version 1.0 uses a manual refresh process.
+
+To download the latest available data and rebuild the processed dataset:
+
+```powershell
+python -m data_sources.updater
+```
+
+This process downloads the newest available source data, validates it, and rebuilds the project's master dataset.
+
+---
+
+# Running the Project
+
+Launch the analytics dashboard:
+
+```powershell
+python dashboard_preview.py
+```
+
+Preview individual charts:
+
+```powershell
+python chart_preview.py
+```
+
+Generate all visualizations:
+
+```powershell
+python visual_review.py
+```
+
+Generate exported figures:
+
+```powershell
+python export_preview.py
+```
+
+Run the complete automated test suite:
+
+```powershell
+python -m pytest
+```
+
+---
+
+# Project Purpose
+
+This project was created to demonstrate professional software engineering practices while developing a reusable financial analytics application.
+
+Primary areas of focus include:
+
+- Software architecture
+- Modular design
+- Data analysis
+- Financial analytics
+- Data visualization
+- Automated testing
+- Documentation
+- Maintainability
+- Extensibility
+
+---
+
+# Important Disclaimer
+
+Gold Value Predictor is intended for educational, analytical, and software engineering purposes.
+
+Forecasts generated by the application are **hypothetical mathematical projections** based on user-selected compound growth assumptions.
+
+They are **not** financial predictions, investment advice, or recommendations.
+
+Gold prices are affected by numerous unpredictable factors, including but not limited to:
+
+- Inflation
+- Interest rates
+- Currency values
+- Central bank policy
+- Global conflicts
+- Political events
+- Mining production
+- Supply and demand
+- Investor sentiment
+- Economic recessions
+- Financial crises
+
+Historical performance does not guarantee future results.
+
+Any projected value produced by this application should be interpreted only as a hypothetical scenario illustrating compound-growth mathematics.
+
+---
+
+# Future Development
+
+Planned Version 2.0 features include:
+
+- Interactive forecasting controls
+- Automatic data refresh
+- Live market data integration
+- Monte Carlo simulations
+- ARIMA forecasting
+- Prophet forecasting
+- Machine learning forecasting
+- Portfolio comparison
+- Desktop application
+- Web dashboard
+- REST API
+
+---
+
+# Documentation
+
+Additional project documentation is included:
+
+- `Development_Log.md`
+- `VERSION_HISTORY.md`
+- `TECHNICAL_ARCHITECTURE.md`
+- `USER_GUIDE.md`
+- `CONTRIBUTING.md`
+
+These documents provide detailed information about the project's evolution, architecture, usage, and development standards.
+
+---
+
+# License
+
+This project is intended for educational and portfolio purposes.
