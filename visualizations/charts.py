@@ -15,6 +15,14 @@ import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
+from visualizations.styling import (
+    DEFAULT_LINE_WIDTH as STYLED_LINE_WIDTH,
+    HISTORICAL_PRICE_COLOR,
+    NOMINAL_PRICE_COLOR,
+    REAL_PRICE_COLOR,
+    RECENT_PRICE_COLOR,
+    apply_standard_formatting as apply_shared_formatting,
+)
 
 from analytics.rolling import (
     DEFAULT_ROLLING_WINDOW,
@@ -34,6 +42,14 @@ from analytics.returns import (
     calculate_cumulative_returns,
     calculate_monthly_returns,
     prepare_price_series,
+)
+
+from analytics.forecasting import (
+    DEFAULT_EXPECTED_GROWTH_RATE,
+    DEFAULT_FORECAST_SCENARIOS,
+    DEFAULT_FORECAST_YEARS,
+    generate_forecast_scenarios,
+    generate_forecast_series,
 )
 
 # ------------------------------------------------------------------
@@ -104,6 +120,20 @@ DEFAULT_COMPARISON_Y_AXIS_LABEL = (
     "Gold Price (USD per Troy Ounce)"
 )
 
+DEFAULT_RECENT_PRICE_SUBTITLE = (
+    "Monthly gold prices from the most recent "
+    "{years} years"
+)
+
+DEFAULT_INFLATION_ADJUSTED_SUBTITLE = (
+    "Historical gold prices expressed in constant "
+    "purchasing-power dollars"
+)
+
+DEFAULT_NOMINAL_VS_REAL_SUBTITLE = (
+    "Comparison of market prices and "
+    "inflation-adjusted purchasing power"
+)
 
 # ------------------------------------------------------------------
 # Return chart settings
@@ -212,40 +242,46 @@ DEFAULT_RANGE_FILL_ALPHA = 0.10
 
 
 # ------------------------------------------------------------------
-# Forecast chart settings
+# Forecast chart defaults
 # ------------------------------------------------------------------
 
 DEFAULT_FORECAST_TITLE = (
-    "Historical Gold Price with Growth Forecast"
+    "Historical Gold Price with Forecast"
 )
 
-DEFAULT_HISTORICAL_LABEL = (
-    "Historical Gold Price"
-)
-
-DEFAULT_FORECAST_LABEL = (
-    "Projected Gold Price"
+DEFAULT_FORECAST_SCENARIO_TITLE = (
+    "Gold Price Forecast Scenarios"
 )
 
 DEFAULT_FORECAST_Y_AXIS_LABEL = (
-    "Gold Price (USD per Troy Ounce)"
+    "Gold Price (USD)"
 )
 
-DEFAULT_FORECAST_LINE_STYLE = "--"
+DEFAULT_FORECAST_HISTORY_LABEL = (
+    "Historical Price"
+)
 
-DEFAULT_FORECAST_LINE_WIDTH = 2.0
-
-DEFAULT_FORECAST_MARKER_SIZE = 6.0
+DEFAULT_FORECAST_LABEL = (
+    "Projected Price"
+)
 
 DEFAULT_FORECAST_BOUNDARY_LABEL = (
     "Forecast Begins"
 )
 
-DEFAULT_FORECAST_MONTHS_PER_YEAR = 12
-
 DEFAULT_FORECAST_HISTORY_YEARS = 10
 
-DEFAULT_FORECAST_PERIOD_YEARS = 5
+DEFAULT_FORECAST_PERIOD_YEARS = (
+    DEFAULT_FORECAST_YEARS
+)
+
+DEFAULT_FORECAST_LINE_STYLE = "--"
+
+DEFAULT_FORECAST_BOUNDARY_STYLE = ":"
+
+DEFAULT_FORECAST_BOUNDARY_WIDTH = 1.5
+
+DEFAULT_FORECAST_MARKER_SIZE = 5.0
 
 # ------------------------------------------------------------------
 # Shared Validation Helpers
@@ -429,15 +465,23 @@ def save_chart(
 # Historical Price Charts
 # ------------------------------------------------------------------
 
+DEFAULT_HISTORICAL_PRICE_SUBTITLE = (
+    "Monthly historical gold prices in U.S. dollars"
+)
+
 def plot_historical_price(
     data: pd.DataFrame,
     column: str = DEFAULT_PRICE_COLUMN,
     *,
     title: str = DEFAULT_CHART_TITLE,
+    subtitle: str | None = DEFAULT_HISTORICAL_PRICE_SUBTITLE,
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
     Plot the complete historical gold-price series.
+
+    This chart serves as the pilot implementation for the shared
+    visualization styling system.
 
     Args:
         data:
@@ -450,11 +494,15 @@ def plot_historical_price(
         title:
             Title displayed above the chart.
 
+        subtitle:
+            Optional descriptive text displayed beneath the title.
+            Pass None to omit the subtitle.
+
         figure_size:
             Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
+        A tuple containing the styled Matplotlib Figure and Axes.
     """
 
     prices = prepare_price_series(
@@ -470,16 +518,36 @@ def plot_historical_price(
         prices.index,
         prices.values,
         label=DEFAULT_PRICE_LABEL,
-        linewidth=DEFAULT_LINE_WIDTH,
+        color=HISTORICAL_PRICE_COLOR,
+        linewidth=STYLED_LINE_WIDTH,
     )
 
-    apply_standard_formatting(
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
+    )
+
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
+    )
+
+    apply_shared_formatting(
+        figure,
         axes,
         title=title,
+        subtitle=subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
         y_label=DEFAULT_Y_AXIS_LABEL,
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper left",
+        apply_tight_layout=True,
     )
 
-    format_currency_axis(axes)
+    format_currency_axis(
+        axes
+    )
 
     return figure, axes
 
@@ -490,6 +558,7 @@ def plot_recent_price(
     column: str = DEFAULT_PRICE_COLUMN,
     *,
     title: str = DEFAULT_RECENT_PRICE_TITLE,
+    subtitle: str | None = None,
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
@@ -507,13 +576,18 @@ def plot_recent_price(
             Name of the price column to plot.
 
         title:
-            Title displayed above the chart.
+            Primary chart title.
+
+        subtitle:
+            Optional subtitle. When omitted, a subtitle describing
+            the selected recent period is generated automatically.
+            Pass an explicit string to override it.
 
         figure_size:
             Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
+        A tuple containing the styled Matplotlib Figure and Axes.
 
     Raises:
         TypeError:
@@ -521,10 +595,16 @@ def plot_recent_price(
 
         ValueError:
             If years is not greater than zero or the requested
-            date range contains no observations.
+            period contains no observations.
     """
 
-    if not isinstance(years, int):
+    if not isinstance(
+        years,
+        int,
+    ) or isinstance(
+        years,
+        bool,
+    ):
         raise TypeError(
             "years must be an integer."
         )
@@ -555,6 +635,14 @@ def plot_recent_price(
             "requested recent period."
         )
 
+    resolved_subtitle = (
+        subtitle
+        if subtitle is not None
+        else DEFAULT_RECENT_PRICE_SUBTITLE.format(
+            years=years
+        )
+    )
+
     figure, axes = create_figure(
         figure_size=figure_size,
     )
@@ -563,16 +651,36 @@ def plot_recent_price(
         recent_prices.index,
         recent_prices.values,
         label=f"Most Recent {years} Years",
-        linewidth=DEFAULT_LINE_WIDTH,
+        color=RECENT_PRICE_COLOR,
+        linewidth=STYLED_LINE_WIDTH,
     )
 
-    apply_standard_formatting(
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
+    )
+
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
+    )
+
+    apply_shared_formatting(
+        figure,
         axes,
         title=f"{title}: Last {years} Years",
+        subtitle=resolved_subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
         y_label=DEFAULT_Y_AXIS_LABEL,
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper left",
+        apply_tight_layout=True,
     )
 
-    format_currency_axis(axes)
+    format_currency_axis(
+        axes
+    )
 
     return figure, axes
 
@@ -583,12 +691,35 @@ def plot_recent_price(
 def plot_inflation_adjusted_price(
     data: pd.DataFrame,
     *,
-    base_date: str | pd.Timestamp |None = None,
+    base_date: str | pd.Timestamp | None = None,
     title: str = DEFAULT_INFLATION_ADJUSTED_TITLE,
+    subtitle: str | None = (
+        DEFAULT_INFLATION_ADJUSTED_SUBTITLE
+    ),
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
     Plot inflation-adjusted gold prices.
+
+    Args:
+        data:
+            DataFrame containing Date, gold-price, and CPI data.
+
+        base_date:
+            Optional purchasing-power base period. When omitted,
+            the latest available CPI observation is used.
+
+        title:
+            Primary chart title.
+
+        subtitle:
+            Optional chart subtitle. Pass None to omit it.
+
+        figure_size:
+            Matplotlib figure dimensions as (width, height).
+
+    Returns:
+        A tuple containing the styled Matplotlib Figure and Axes.
     """
 
     real_prices = calculate_real_price(
@@ -603,17 +734,39 @@ def plot_inflation_adjusted_price(
     axes.plot(
         real_prices.index,
         real_prices.values,
-        linewidth=DEFAULT_LINE_WIDTH,
+        color=REAL_PRICE_COLOR,
+        linewidth=STYLED_LINE_WIDTH,
         label=DEFAULT_REAL_LABEL,
     )
 
-    apply_standard_formatting(
-        axes,
-        title=title,
-        y_label=DEFAULT_INFLATION_ADJUSTED_Y_AXIS_LABEL,
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
     )
 
-    format_currency_axis(axes)
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
+    )
+
+    apply_shared_formatting(
+        figure,
+        axes,
+        title=title,
+        subtitle=subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
+        y_label=(
+            DEFAULT_INFLATION_ADJUSTED_Y_AXIS_LABEL
+        ),
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper left",
+        apply_tight_layout=True,
+    )
+
+    format_currency_axis(
+        axes
+    )
 
     return figure, axes
 
@@ -623,13 +776,38 @@ def plot_nominal_vs_real_price(
     *,
     base_date: str | pd.Timestamp | None = None,
     title: str = DEFAULT_NOMINAL_VS_REAL_TITLE,
+    subtitle: str | None = (
+        DEFAULT_NOMINAL_VS_REAL_SUBTITLE
+    ),
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
     Compare nominal and inflation-adjusted gold prices.
+
+    Args:
+        data:
+            DataFrame containing Date, gold-price, and CPI data.
+
+        base_date:
+            Optional purchasing-power base period. When omitted,
+            the latest available CPI observation is used.
+
+        title:
+            Primary chart title.
+
+        subtitle:
+            Optional chart subtitle. Pass None to omit it.
+
+        figure_size:
+            Matplotlib figure dimensions as (width, height).
+
+    Returns:
+        A tuple containing the styled Matplotlib Figure and Axes.
     """
 
-    nominal_prices = prepare_price_series(data)
+    nominal_prices = prepare_price_series(
+        data
+    )
 
     real_prices = calculate_real_price(
         data=data,
@@ -658,7 +836,8 @@ def plot_nominal_vs_real_price(
         comparison[
             DEFAULT_NOMINAL_LABEL
         ],
-        linewidth=DEFAULT_LINE_WIDTH,
+        color=NOMINAL_PRICE_COLOR,
+        linewidth=STYLED_LINE_WIDTH,
         label=DEFAULT_NOMINAL_LABEL,
     )
 
@@ -667,17 +846,37 @@ def plot_nominal_vs_real_price(
         comparison[
             DEFAULT_REAL_LABEL
         ],
-        linewidth=DEFAULT_LINE_WIDTH,
+        color=REAL_PRICE_COLOR,
+        linewidth=STYLED_LINE_WIDTH,
         label=DEFAULT_REAL_LABEL,
     )
 
-    apply_standard_formatting(
-        axes,
-        title=title,
-        y_label=DEFAULT_COMPARISON_Y_AXIS_LABEL,
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
     )
 
-    format_currency_axis(axes)
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
+    )
+
+    apply_shared_formatting(
+        figure,
+        axes,
+        title=title,
+        subtitle=subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
+        y_label=DEFAULT_COMPARISON_Y_AXIS_LABEL,
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper left",
+        apply_tight_layout=True,
+    )
+
+    format_currency_axis(
+        axes
+    )
 
     return figure, axes
 
@@ -1427,5 +1626,379 @@ def plot_rolling_high_low(
     )
 
     format_currency_axis(axes)
+
+    return figure, axes
+
+# ------------------------------------------------------------------
+# Forecast Charts
+# ------------------------------------------------------------------
+
+def plot_forecast(
+    data: pd.DataFrame,
+    column: str = DEFAULT_PRICE_COLUMN,
+    *,
+    annual_growth_rate: float = (
+        DEFAULT_EXPECTED_GROWTH_RATE
+    ),
+    forecast_years: int = (
+        DEFAULT_FORECAST_PERIOD_YEARS
+    ),
+    history_years: int | None = (
+        DEFAULT_FORECAST_HISTORY_YEARS
+    ),
+    title: str = DEFAULT_FORECAST_TITLE,
+    figure_size: tuple[float, float] = (
+        DEFAULT_FIGURE_SIZE
+    ),
+) -> tuple[Figure, Axes]:
+    """
+    Plot recent historical prices followed by one
+    hypothetical forecast scenario.
+
+    The forecast is generated by the analytics layer using
+    a constant annual growth-rate assumption. This function
+    is responsible only for selecting the visible historical
+    period and rendering the chart.
+
+    Args:
+        data:
+            Source DataFrame containing historical prices.
+
+        column:
+            Numeric price column used for the chart.
+
+        annual_growth_rate:
+            Constant annual forecast growth rate expressed
+            as a decimal.
+
+        forecast_years:
+            Number of future years to display.
+
+        history_years:
+            Number of recent historical years to display.
+            When None, the complete historical series is
+            shown.
+
+        title:
+            Title displayed above the chart.
+
+        figure_size:
+            Matplotlib figure dimensions as
+            (width, height).
+
+    Returns:
+        A tuple containing the Matplotlib Figure and Axes.
+
+    Raises:
+        TypeError:
+            If history_years is not an integer or None.
+
+        ValueError:
+            If history_years is less than one or no valid
+            historical prices are available.
+    """
+
+    if history_years is not None:
+        if (
+            isinstance(history_years, bool)
+            or not isinstance(history_years, int)
+        ):
+            raise TypeError(
+                "history_years must be an integer or None."
+            )
+
+        if history_years < 1:
+            raise ValueError(
+                "history_years must be at least 1."
+            )
+
+    prices = prepare_price_series(
+        data=data,
+        column=column,
+    )
+
+    valid_prices = (
+        prices
+        .dropna()
+        .sort_index()
+    )
+
+    if valid_prices.empty:
+        raise ValueError(
+            "No valid historical prices are available "
+            "for the forecast chart."
+        )
+
+    if history_years is None:
+        visible_history = valid_prices
+    else:
+        history_start_date = (
+            valid_prices.index[-1]
+            - pd.DateOffset(
+                years=history_years
+            )
+        )
+
+        visible_history = valid_prices.loc[
+            valid_prices.index
+            >= history_start_date
+        ]
+
+    forecast = generate_forecast_series(
+        price_series=valid_prices,
+        annual_growth_rate=annual_growth_rate,
+        years=forecast_years,
+    )
+
+    forecast_boundary = valid_prices.index[-1]
+
+    connected_forecast = pd.concat(
+        [
+            valid_prices.iloc[-1:].rename(
+                forecast.name
+            ),
+            forecast,
+        ]
+    )
+
+    figure, axes = create_figure(
+        figure_size=figure_size,
+    )
+
+    axes.plot(
+        visible_history.index,
+        visible_history.values,
+        linewidth=DEFAULT_LINE_WIDTH,
+        label=DEFAULT_FORECAST_HISTORY_LABEL,
+    )
+
+    axes.plot(
+        connected_forecast.index,
+        connected_forecast.values,
+        linewidth=DEFAULT_LINE_WIDTH,
+        linestyle=DEFAULT_FORECAST_LINE_STYLE,
+        marker="o",
+        markersize=DEFAULT_FORECAST_MARKER_SIZE,
+        markevery=[
+            len(connected_forecast) - 1
+        ],
+        label=(
+            f"{DEFAULT_FORECAST_LABEL} "
+            f"({annual_growth_rate:.1%} annually)"
+        ),
+    )
+
+    axes.axvline(
+        x=forecast_boundary,
+        linewidth=DEFAULT_FORECAST_BOUNDARY_WIDTH,
+        linestyle=DEFAULT_FORECAST_BOUNDARY_STYLE,
+        label=DEFAULT_FORECAST_BOUNDARY_LABEL,
+    )
+
+    apply_standard_formatting(
+        axes,
+        title=title,
+        y_label=DEFAULT_FORECAST_Y_AXIS_LABEL,
+    )
+
+    format_currency_axis(axes)
+
+    figure.tight_layout()
+
+    return figure, axes
+
+
+def plot_forecast_scenarios(
+    data: pd.DataFrame,
+    column: str = DEFAULT_PRICE_COLUMN,
+    *,
+    growth_rates: dict[str, float] | None = None,
+    forecast_years: int = (
+        DEFAULT_FORECAST_PERIOD_YEARS
+    ),
+    history_years: int | None = (
+        DEFAULT_FORECAST_HISTORY_YEARS
+    ),
+    title: str = DEFAULT_FORECAST_SCENARIO_TITLE,
+    figure_size: tuple[float, float] = (
+        DEFAULT_FIGURE_SIZE
+    ),
+) -> tuple[Figure, Axes]:
+    """
+    Plot recent historical prices followed by multiple
+    hypothetical forecast scenarios.
+
+    Each scenario is generated by the analytics layer from
+    a separate annual growth-rate assumption.
+
+    Args:
+        data:
+            Source DataFrame containing historical prices.
+
+        column:
+            Numeric price column used for the chart.
+
+        growth_rates:
+            Mapping of scenario names to annual growth rates.
+
+            When omitted, the default conservative,
+            expected, and optimistic scenarios are used.
+
+        forecast_years:
+            Number of future years to display.
+
+        history_years:
+            Number of recent historical years to display.
+            When None, the complete historical series is
+            shown.
+
+        title:
+            Title displayed above the chart.
+
+        figure_size:
+            Matplotlib figure dimensions as
+            (width, height).
+
+    Returns:
+        A tuple containing the Matplotlib Figure and Axes.
+
+    Raises:
+        TypeError:
+            If history_years is not an integer or None.
+
+        ValueError:
+            If history_years is less than one or no valid
+            historical prices are available.
+    """
+
+    if history_years is not None:
+        if (
+            isinstance(history_years, bool)
+            or not isinstance(history_years, int)
+        ):
+            raise TypeError(
+                "history_years must be an integer or None."
+            )
+
+        if history_years < 1:
+            raise ValueError(
+                "history_years must be at least 1."
+            )
+
+    prices = prepare_price_series(
+        data=data,
+        column=column,
+    )
+
+    valid_prices = (
+        prices
+        .dropna()
+        .sort_index()
+    )
+
+    if valid_prices.empty:
+        raise ValueError(
+            "No valid historical prices are available "
+            "for the scenario chart."
+        )
+
+    if history_years is None:
+        visible_history = valid_prices
+    else:
+        history_start_date = (
+            valid_prices.index[-1]
+            - pd.DateOffset(
+                years=history_years
+            )
+        )
+
+        visible_history = valid_prices.loc[
+            valid_prices.index
+            >= history_start_date
+        ]
+
+    scenario_forecasts = (
+        generate_forecast_scenarios(
+            price_series=valid_prices,
+            growth_rates=growth_rates,
+            years=forecast_years,
+        )
+    )
+
+    resolved_growth_rates = (
+        DEFAULT_FORECAST_SCENARIOS
+        if growth_rates is None
+        else growth_rates
+    )
+
+    forecast_boundary = valid_prices.index[-1]
+
+    figure, axes = create_figure(
+        figure_size=figure_size,
+    )
+
+    axes.plot(
+        visible_history.index,
+        visible_history.values,
+        linewidth=DEFAULT_LINE_WIDTH,
+        label=DEFAULT_FORECAST_HISTORY_LABEL,
+    )
+
+    for scenario_name in (
+        scenario_forecasts.columns
+    ):
+        scenario_series = (
+            scenario_forecasts[
+                scenario_name
+            ]
+        )
+
+        connected_scenario = pd.concat(
+            [
+                valid_prices.iloc[-1:].rename(
+                    scenario_name
+                ),
+                scenario_series,
+            ]
+        )
+
+        growth_rate = resolved_growth_rates[
+            scenario_name
+        ]
+
+        axes.plot(
+            connected_scenario.index,
+            connected_scenario.values,
+            linewidth=DEFAULT_LINE_WIDTH,
+            linestyle=DEFAULT_FORECAST_LINE_STYLE,
+            marker="o",
+            markersize=(
+                DEFAULT_FORECAST_MARKER_SIZE
+            ),
+            markevery=[
+                len(connected_scenario) - 1
+            ],
+            label=(
+                f"{scenario_name} "
+                f"({growth_rate:.1%})"
+            ),
+        )
+
+    axes.axvline(
+        x=forecast_boundary,
+        linewidth=DEFAULT_FORECAST_BOUNDARY_WIDTH,
+        linestyle=DEFAULT_FORECAST_BOUNDARY_STYLE,
+        label=DEFAULT_FORECAST_BOUNDARY_LABEL,
+    )
+
+    apply_standard_formatting(
+        axes,
+        title=title,
+        y_label=DEFAULT_FORECAST_Y_AXIS_LABEL,
+    )
+
+    format_currency_axis(axes)
+
+    figure.tight_layout()
 
     return figure, axes
