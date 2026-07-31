@@ -37,6 +37,7 @@ from visualizations.styling.colors import (
     TEXT_COLOR,
     VOLATILITY_COLOR,
     RECENT_PRICE_COLOR,
+    NEUTRAL_RETURN_COLOR,
 )
 
 from visualizations.styling.constants import (
@@ -135,6 +136,21 @@ from visualizations.styling.formatting import (
     validate_figure,
     validate_optional_text,
 )
+
+from visualizations.styling.annotations import (
+    add_axes_note,
+    add_figure_source_note,
+    add_watermark,
+    annotate_high_value,
+    annotate_latest_value,
+    annotate_low_value,
+    annotate_series_point,
+    annotate_vertical_event,
+    format_annotation_value,
+    validate_annotation_offset,
+    validate_numeric_series,
+)
+
 
 __all__ = [
     "ANNOTATION_BOX_ALPHA",
@@ -255,4 +271,22 @@ __all__ = [
     "validate_figure",
     "validate_optional_text",
     "RECENT_PRICE_COLOR",
+    "NEUTRAL_RETURN_COLOR",
+    "FORECAST_BOUNDARY_COLOR",
+    "FORECAST_COLOR",
+    "FORECAST_CONSERVATIVE_COLOR",
+    "add_axes_note",
+    "annotate_high_value",
+    "annotate_latest_value",
+    "annotate_low_value",
+    "annotate_series_point",
+    "annotate_vertical_event",
+    "format_annotation_value",
+    "validate_annotation_offset",
+    "validate_numeric_series",
+    "add_figure_source_note",
+    "add_watermark",
 ]
+
+
+

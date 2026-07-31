@@ -7,22 +7,12 @@ allows charts to be tested, customized, displayed, or saved by
 other parts of the application.
 """
 
-from pathlib import Path
-
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
-from visualizations.styling import (
-    DEFAULT_LINE_WIDTH as STYLED_LINE_WIDTH,
-    HISTORICAL_PRICE_COLOR,
-    NOMINAL_PRICE_COLOR,
-    REAL_PRICE_COLOR,
-    RECENT_PRICE_COLOR,
-    apply_standard_formatting as apply_shared_formatting,
-)
 
 from analytics.rolling import (
     DEFAULT_ROLLING_WINDOW,
@@ -52,6 +42,42 @@ from analytics.forecasting import (
     generate_forecast_series,
 )
 
+from visualizations.styling import (
+    ANNUAL_RETURN_COLOR,
+    CUMULATIVE_RETURN_COLOR,
+    DEFAULT_LINE_WIDTH,
+    DRAWDOWN_COLOR,
+    HISTORICAL_PRICE_COLOR,
+    NEGATIVE_RETURN_COLOR,
+    NEUTRAL_RETURN_COLOR,
+    NOMINAL_PRICE_COLOR,
+    POSITIVE_RETURN_COLOR,
+    REAL_PRICE_COLOR,
+    RECENT_PRICE_COLOR,
+    REFERENCE_LINE_COLOR,
+    ROLLING_AVERAGE_COLOR,
+    ROLLING_HIGH_COLOR,
+    ROLLING_LOW_COLOR,
+    ROLLING_RANGE_COLOR,
+    ROLLING_RETURN_COLOR,
+    VOLATILITY_COLOR,
+    apply_standard_formatting,
+    FORECAST_BOUNDARY_COLOR,
+    FORECAST_COLOR,
+    FORECAST_CONSERVATIVE_COLOR,
+    FORECAST_BASE_COLOR,
+    FORECAST_OPTIMISTIC_COLOR,
+    SCENARIO_COLORS,
+    SECONDARY_TEXT_COLOR,
+    annotate_high_value,
+    annotate_latest_value,
+    annotate_low_value,
+    GOLD_HIGHLIGHT_COLOR,
+    annotate_vertical_event,
+    add_figure_source_note,
+    add_watermark,
+)
+
 # ------------------------------------------------------------------
 # General chart settings
 # ------------------------------------------------------------------
@@ -63,18 +89,6 @@ DEFAULT_X_AXIS_LABEL = "Date"
 DEFAULT_Y_AXIS_LABEL = "Gold Price (USD)"
 
 DEFAULT_FIGURE_SIZE = (12.0, 6.0)
-
-DEFAULT_LINE_WIDTH = 2.0
-
-DEFAULT_GRID_ALPHA = 0.25
-
-DEFAULT_DPI = 300
-
-DEFAULT_TITLE_PADDING = 22.0
-
-DEFAULT_LABEL_PADDING = 10.0
-
-DEFAULT_ANNOTATION_OFFSET = (12, 12)
 
 
 # ------------------------------------------------------------------
@@ -90,16 +104,8 @@ DEFAULT_RECENT_PRICE_TITLE = "Recent Gold Prices"
 # Inflation-adjusted chart settings
 # ------------------------------------------------------------------
 
-DEFAULT_INFLATION_ADJUSTED_COLUMN = (
-    "Inflation_Adjusted_Price"
-)
-
 DEFAULT_INFLATION_ADJUSTED_TITLE = (
     "Inflation-Adjusted Gold Prices"
-)
-
-DEFAULT_INFLATION_ADJUSTED_LABEL = (
-    "Inflation-Adjusted Price"
 )
 
 DEFAULT_INFLATION_ADJUSTED_Y_AXIS_LABEL = (
@@ -143,19 +149,30 @@ DEFAULT_MONTHLY_RETURNS_TITLE = (
     "Monthly Gold Price Returns"
 )
 
-DEFAULT_MONTHLY_RETURNS_LABEL = (
-    "Monthly Return"
-)
 
 DEFAULT_RETURNS_Y_AXIS_LABEL = (
     "Monthly Return"
 )
 
-DEFAULT_ZERO_LINE_WIDTH = 1.0
-
 DEFAULT_REFERENCE_LINE_WIDTH = 1.25
 
 DEFAULT_PERCENTAGE_FILL_ALPHA = 0.20
+
+DEFAULT_MONTHLY_RETURNS_SUBTITLE = (
+    "Month-over-month percentage changes in gold prices"
+)
+
+DEFAULT_CUMULATIVE_RETURNS_SUBTITLE = (
+    "Total percentage growth relative to the first observation"
+)
+
+DEFAULT_ANNUAL_RETURNS_SUBTITLE = (
+    "Calendar-year performance based on year-end gold prices"
+)
+
+DEFAULT_RETURN_DISTRIBUTION_SUBTITLE = (
+    "Frequency distribution of monthly gold-price returns"
+)
 
 
 # ------------------------------------------------------------------
@@ -240,6 +257,31 @@ DEFAULT_ROLLING_HIGH_LOW_Y_AXIS_LABEL = (
 
 DEFAULT_RANGE_FILL_ALPHA = 0.10
 
+DEFAULT_ROLLING_AVERAGE_SUBTITLE = (
+    "Gold prices compared with their "
+    "{window}-month moving average"
+)
+
+DEFAULT_ROLLING_VOLATILITY_SUBTITLE = (
+    "{window}-month {volatility_type} volatility "
+    "calculated from monthly returns"
+)
+
+DEFAULT_ROLLING_RETURN_SUBTITLE = (
+    "Percentage change across each "
+    "{window}-month rolling period"
+)
+
+DEFAULT_ROLLING_DRAWDOWN_SUBTITLE = (
+    "Decline from the highest gold price observed "
+    "within each {window}-month window"
+)
+
+DEFAULT_ROLLING_HIGH_LOW_SUBTITLE = (
+    "Gold prices compared with the highest and lowest "
+    "values in each {window}-month window"
+)
+
 
 # ------------------------------------------------------------------
 # Forecast chart defaults
@@ -282,6 +324,21 @@ DEFAULT_FORECAST_BOUNDARY_STYLE = ":"
 DEFAULT_FORECAST_BOUNDARY_WIDTH = 1.5
 
 DEFAULT_FORECAST_MARKER_SIZE = 5.0
+
+DEFAULT_FORECAST_SUBTITLE = (
+    "Hypothetical {forecast_years}-year projection using "
+    "a constant {growth_rate:.1%} annual growth assumption"
+)
+
+DEFAULT_FORECAST_SCENARIO_SUBTITLE = (
+    "Comparison of hypothetical {forecast_years}-year "
+    "growth scenarios"
+)
+
+DEFAULT_FORECAST_DISCLAIMER = (
+    "Scenario projections are illustrative and are not "
+    "predictions or investment advice."
+)
 
 # ------------------------------------------------------------------
 # Shared Validation Helpers
@@ -349,53 +406,6 @@ def create_figure(
     return figure, axes
 
 
-def apply_standard_formatting(
-    axes: Axes,
-    *,
-    title: str,
-    x_label: str = DEFAULT_X_AXIS_LABEL,
-    y_label: str = DEFAULT_Y_AXIS_LABEL,
-    legend: bool = True,
-) -> None:
-    """
-    Apply consistent formatting to every chart.
-    """
-
-    axes.set_title(
-        title,
-        pad=DEFAULT_TITLE_PADDING,
-    )
-
-    axes.set_xlabel(
-        x_label,
-        labelpad=DEFAULT_LABEL_PADDING,
-    )
-
-    axes.set_ylabel(
-        y_label,
-        labelpad=DEFAULT_LABEL_PADDING,
-    )
-
-    axes.grid(
-        alpha=DEFAULT_GRID_ALPHA,
-    )
-
-    axes.xaxis.set_major_locator(
-        mdates.AutoDateLocator()
-    )
-
-    axes.xaxis.set_major_formatter(
-        mdates.ConciseDateFormatter(
-            axes.xaxis.get_major_locator()
-        )
-    )
-
-    if legend:
-        axes.legend()
-
-    plt.tight_layout()
-
-
 def format_currency_axis(
     axes: Axes,
 ) -> None:
@@ -446,21 +456,6 @@ def format_percentage_axis(
             formatter
         )
 
-
-def save_chart(
-    figure: Figure,
-    output_path: str | Path,
-) -> None:
-    """
-    Save a chart to disk.
-    """
-
-    figure.savefig(
-        output_path,
-        dpi=DEFAULT_DPI,
-        bbox_inches="tight",
-    )
-
 # ------------------------------------------------------------------
 # Historical Price Charts
 # ------------------------------------------------------------------
@@ -475,13 +470,13 @@ def plot_historical_price(
     *,
     title: str = DEFAULT_CHART_TITLE,
     subtitle: str | None = DEFAULT_HISTORICAL_PRICE_SUBTITLE,
+    show_latest_value: bool = True,
+    source_note: str | None = None,
+    watermark: str | None = None,
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
     Plot the complete historical gold-price series.
-
-    This chart serves as the pilot implementation for the shared
-    visualization styling system.
 
     Args:
         data:
@@ -498,12 +493,34 @@ def plot_historical_price(
             Optional descriptive text displayed beneath the title.
             Pass None to omit the subtitle.
 
+        show_latest_value:
+            Whether to annotate the latest valid gold price.
+
+        source_note:
+            Optional source or attribution text displayed along
+            the bottom of the Figure.
+
+        watermark:
+            Optional subtle watermark displayed inside the Axes.
+
         figure_size:
             Matplotlib figure dimensions as (width, height).
 
     Returns:
         A tuple containing the styled Matplotlib Figure and Axes.
+
+    Raises:
+        TypeError:
+            If show_latest_value is not a Boolean value.
     """
+
+    if not isinstance(
+        show_latest_value,
+        bool,
+    ):
+        raise TypeError(
+            "show_latest_value must be a Boolean value."
+        )
 
     prices = prepare_price_series(
         data=data,
@@ -519,7 +536,7 @@ def plot_historical_price(
         prices.values,
         label=DEFAULT_PRICE_LABEL,
         color=HISTORICAL_PRICE_COLOR,
-        linewidth=STYLED_LINE_WIDTH,
+        linewidth=DEFAULT_LINE_WIDTH,
     )
 
     axes.xaxis.set_major_locator(
@@ -532,7 +549,7 @@ def plot_historical_price(
         )
     )
 
-    apply_shared_formatting(
+    apply_standard_formatting(
         figure,
         axes,
         title=title,
@@ -542,11 +559,46 @@ def plot_historical_price(
         show_grid=True,
         show_legend=True,
         legend_location="upper left",
-        apply_tight_layout=True,
+        apply_tight_layout=False,
     )
 
     format_currency_axis(
         axes
+    )
+
+    if show_latest_value:
+        annotate_latest_value(
+            axes,
+            prices,
+            prefix="Latest",
+            value_format="currency",
+            marker_color=GOLD_HIGHLIGHT_COLOR,
+            offset=(
+                -90,
+                14,
+            ),
+        )
+
+    if watermark is not None:
+        add_watermark(
+            axes,
+            watermark,
+        )
+
+    if source_note is not None:
+        add_figure_source_note(
+            figure,
+            source_note,
+        )
+
+    figure.tight_layout(
+        pad=1.5,
+        rect=(
+            0.0,
+            0.04 if source_note is not None else 0.0,
+            1.0,
+            1.0,
+        ),
     )
 
     return figure, axes
@@ -559,6 +611,10 @@ def plot_recent_price(
     *,
     title: str = DEFAULT_RECENT_PRICE_TITLE,
     subtitle: str | None = None,
+    show_latest_value: bool = True,
+    show_high_low: bool = True,
+    source_note: str | None = None,
+    watermark: str | None = None,
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
@@ -581,7 +637,19 @@ def plot_recent_price(
         subtitle:
             Optional subtitle. When omitted, a subtitle describing
             the selected recent period is generated automatically.
-            Pass an explicit string to override it.
+
+        show_latest_value:
+            Whether to annotate the latest valid price.
+
+        show_high_low:
+            Whether to annotate the period high and low.
+
+        source_note:
+            Optional source or attribution text displayed along
+            the bottom of the Figure.
+
+        watermark:
+            Optional subtle watermark displayed inside the Axes.
 
         figure_size:
             Matplotlib figure dimensions as (width, height).
@@ -591,19 +659,17 @@ def plot_recent_price(
 
     Raises:
         TypeError:
-            If years is not an integer.
+            If years is not an integer or either annotation option
+            is not a Boolean value.
 
         ValueError:
             If years is not greater than zero or the requested
             period contains no observations.
     """
 
-    if not isinstance(
-        years,
-        int,
-    ) or isinstance(
-        years,
-        bool,
+    if (
+        isinstance(years, bool)
+        or not isinstance(years, int)
     ):
         raise TypeError(
             "years must be an integer."
@@ -612,6 +678,22 @@ def plot_recent_price(
     if years <= 0:
         raise ValueError(
             "years must be greater than zero."
+        )
+
+    if not isinstance(
+        show_latest_value,
+        bool,
+    ):
+        raise TypeError(
+            "show_latest_value must be a Boolean value."
+        )
+
+    if not isinstance(
+        show_high_low,
+        bool,
+    ):
+        raise TypeError(
+            "show_high_low must be a Boolean value."
         )
 
     prices = prepare_price_series(
@@ -652,7 +734,7 @@ def plot_recent_price(
         recent_prices.values,
         label=f"Most Recent {years} Years",
         color=RECENT_PRICE_COLOR,
-        linewidth=STYLED_LINE_WIDTH,
+        linewidth=DEFAULT_LINE_WIDTH,
     )
 
     axes.xaxis.set_major_locator(
@@ -665,7 +747,7 @@ def plot_recent_price(
         )
     )
 
-    apply_shared_formatting(
+    apply_standard_formatting(
         figure,
         axes,
         title=f"{title}: Last {years} Years",
@@ -675,11 +757,80 @@ def plot_recent_price(
         show_grid=True,
         show_legend=True,
         legend_location="upper left",
-        apply_tight_layout=True,
+        apply_tight_layout=False,
     )
 
     format_currency_axis(
         axes
+    )
+
+    latest_observation_date = (
+        recent_prices.index[-1]
+    )
+
+    high_date = recent_prices.idxmax()
+    low_date = recent_prices.idxmin()
+
+    if show_latest_value:
+        annotate_latest_value(
+            axes,
+            recent_prices,
+            prefix="Latest",
+            value_format="currency",
+            marker_color=RECENT_PRICE_COLOR,
+            offset=(
+                -90,
+                14,
+            ),
+        )
+
+    if show_high_low:
+        if high_date != latest_observation_date:
+            annotate_high_value(
+                axes,
+                recent_prices,
+                prefix=f"{years}-Year High",
+                value_format="currency",
+                marker_color=GOLD_HIGHLIGHT_COLOR,
+                offset=(
+                    12,
+                    16,
+                ),
+            )
+
+        if low_date != latest_observation_date:
+            annotate_low_value(
+                axes,
+                recent_prices,
+                prefix=f"{years}-Year Low",
+                value_format="currency",
+                marker_color=HISTORICAL_PRICE_COLOR,
+                offset=(
+                    12,
+                    -28,
+                ),
+            )
+
+    if watermark is not None:
+        add_watermark(
+            axes,
+            watermark,
+        )
+
+    if source_note is not None:
+        add_figure_source_note(
+            figure,
+            source_note,
+        )
+
+    figure.tight_layout(
+        pad=1.5,
+        rect=(
+            0.0,
+            0.04 if source_note is not None else 0.0,
+            1.0,
+            1.0,
+        ),
     )
 
     return figure, axes
@@ -735,7 +886,7 @@ def plot_inflation_adjusted_price(
         real_prices.index,
         real_prices.values,
         color=REAL_PRICE_COLOR,
-        linewidth=STYLED_LINE_WIDTH,
+        linewidth=DEFAULT_LINE_WIDTH,
         label=DEFAULT_REAL_LABEL,
     )
 
@@ -749,7 +900,7 @@ def plot_inflation_adjusted_price(
         )
     )
 
-    apply_shared_formatting(
+    apply_standard_formatting(
         figure,
         axes,
         title=title,
@@ -837,7 +988,7 @@ def plot_nominal_vs_real_price(
             DEFAULT_NOMINAL_LABEL
         ],
         color=NOMINAL_PRICE_COLOR,
-        linewidth=STYLED_LINE_WIDTH,
+        linewidth=DEFAULT_LINE_WIDTH,
         label=DEFAULT_NOMINAL_LABEL,
     )
 
@@ -847,7 +998,7 @@ def plot_nominal_vs_real_price(
             DEFAULT_REAL_LABEL
         ],
         color=REAL_PRICE_COLOR,
-        linewidth=STYLED_LINE_WIDTH,
+        linewidth=DEFAULT_LINE_WIDTH,
         label=DEFAULT_REAL_LABEL,
     )
 
@@ -861,7 +1012,7 @@ def plot_nominal_vs_real_price(
         )
     )
 
-    apply_shared_formatting(
+    apply_standard_formatting(
         figure,
         axes,
         title=title,
@@ -888,14 +1039,17 @@ def plot_monthly_returns(
     data: pd.DataFrame,
     column: str = DEFAULT_PRICE_COLUMN,
     *,
-    title: str = "Monthly Gold Returns",
+    title: str = DEFAULT_MONTHLY_RETURNS_TITLE,
+    subtitle: str | None = (
+        DEFAULT_MONTHLY_RETURNS_SUBTITLE
+    ),
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
-    Plot month-over-month returns as a time series.
+    Plot month-over-month gold-price returns.
 
-    Returns are represented as decimal values by the analytics
-    layer and displayed as percentages on the chart.
+    Positive and negative returns are displayed using separate
+    semantic colors, making changes in direction easier to read.
 
     Args:
         data:
@@ -905,13 +1059,16 @@ def plot_monthly_returns(
             Numeric price column used to calculate returns.
 
         title:
-            Title displayed above the chart.
+            Primary chart title.
+
+        subtitle:
+            Optional descriptive subtitle. Pass None to omit it.
 
         figure_size:
             Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
+        A tuple containing the styled Matplotlib Figure and Axes.
     """
 
     monthly_returns = calculate_monthly_returns(
@@ -924,46 +1081,86 @@ def plot_monthly_returns(
             "No monthly returns are available to plot."
         )
 
+    positive_returns = monthly_returns.where(
+        monthly_returns >= 0
+    )
+
+    negative_returns = monthly_returns.where(
+        monthly_returns < 0
+    )
+
     figure, axes = create_figure(
         figure_size=figure_size,
     )
 
     axes.plot(
-        monthly_returns.index,
-        monthly_returns.values,
+        positive_returns.index,
+        positive_returns.values,
+        color=POSITIVE_RETURN_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
-        label="Monthly Return",
+        label="Positive Monthly Return",
+    )
+
+    axes.plot(
+        negative_returns.index,
+        negative_returns.values,
+        color=NEGATIVE_RETURN_COLOR,
+        linewidth=DEFAULT_LINE_WIDTH,
+        label="Negative Monthly Return",
     )
 
     axes.axhline(
         y=0,
-        linewidth=1,
+        color=REFERENCE_LINE_COLOR,
+        linewidth=DEFAULT_REFERENCE_LINE_WIDTH,
         linestyle="--",
+        label="Zero Return",
+    )
+
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
+    )
+
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
     )
 
     apply_standard_formatting(
+        figure,
         axes,
         title=title,
-        y_label="Monthly Return",
+        subtitle=subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
+        y_label=DEFAULT_RETURNS_Y_AXIS_LABEL,
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper left",
+        apply_tight_layout=True,
     )
 
-    format_percentage_axis(axes)
+    format_percentage_axis(
+        axes
+    )
 
     return figure, axes
-
 
 def plot_cumulative_returns(
     data: pd.DataFrame,
     column: str = DEFAULT_PRICE_COLUMN,
     *,
     title: str = "Cumulative Gold Returns",
+    subtitle: str | None = (
+        DEFAULT_CUMULATIVE_RETURNS_SUBTITLE
+    ),
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
-    Plot cumulative growth relative to the first observation.
+    Plot cumulative gold-price returns.
 
-    A cumulative return of 1.00 represents growth of 100%
-    relative to the starting value.
+    A cumulative return of 1.0 represents growth of 100%
+    relative to the first usable observation.
 
     Args:
         data:
@@ -973,13 +1170,16 @@ def plot_cumulative_returns(
             Numeric price column used to calculate returns.
 
         title:
-            Title displayed above the chart.
+            Primary chart title.
+
+        subtitle:
+            Optional descriptive subtitle. Pass None to omit it.
 
         figure_size:
             Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
+        A tuple containing the styled Matplotlib Figure and Axes.
     """
 
     cumulative_returns = calculate_cumulative_returns(
@@ -999,23 +1199,45 @@ def plot_cumulative_returns(
     axes.plot(
         cumulative_returns.index,
         cumulative_returns.values,
+        color=CUMULATIVE_RETURN_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
         label="Cumulative Return",
     )
 
     axes.axhline(
         y=0,
-        linewidth=1,
+        color=REFERENCE_LINE_COLOR,
+        linewidth=DEFAULT_REFERENCE_LINE_WIDTH,
         linestyle="--",
+        label="Starting Level",
+    )
+
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
+    )
+
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
     )
 
     apply_standard_formatting(
+        figure,
         axes,
         title=title,
+        subtitle=subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
         y_label="Cumulative Return",
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper left",
+        apply_tight_layout=True,
     )
 
-    format_percentage_axis(axes)
+    format_percentage_axis(
+        axes
+    )
 
     return figure, axes
 
@@ -1025,14 +1247,16 @@ def plot_annual_returns(
     column: str = DEFAULT_PRICE_COLUMN,
     *,
     title: str = "Annual Gold Returns",
+    subtitle: str | None = (
+        DEFAULT_ANNUAL_RETURNS_SUBTITLE
+    ),
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
     Plot calendar-year gold returns as a bar chart.
 
-    Each annual return compares the final available price in
-    one year with the final available price in the previous
-    year.
+    Positive years use the shared positive-return color and
+    negative years use the shared negative-return color.
 
     Args:
         data:
@@ -1042,13 +1266,16 @@ def plot_annual_returns(
             Numeric price column used to calculate returns.
 
         title:
-            Title displayed above the chart.
+            Primary chart title.
+
+        subtitle:
+            Optional descriptive subtitle. Pass None to omit it.
 
         figure_size:
             Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
+        A tuple containing the styled Matplotlib Figure and Axes.
     """
 
     annual_returns = calculate_annual_returns(
@@ -1061,6 +1288,15 @@ def plot_annual_returns(
             "No annual returns are available to plot."
         )
 
+    bar_colors = [
+        (
+            POSITIVE_RETURN_COLOR
+            if value >= 0
+            else NEGATIVE_RETURN_COLOR
+        )
+        for value in annual_returns.values
+    ]
+
     figure, axes = create_figure(
         figure_size=figure_size,
     )
@@ -1068,22 +1304,32 @@ def plot_annual_returns(
     axes.bar(
         annual_returns.index,
         annual_returns.values,
+        color=bar_colors,
         label="Annual Return",
     )
 
     axes.axhline(
         y=0,
-        linewidth=1,
+        color=REFERENCE_LINE_COLOR,
+        linewidth=DEFAULT_REFERENCE_LINE_WIDTH,
+        linestyle="--",
     )
 
     apply_standard_formatting(
+        figure,
         axes,
         title=title,
+        subtitle=subtitle,
         x_label="Year",
         y_label="Annual Return",
+        show_grid=True,
+        show_legend=False,
+        apply_tight_layout=True,
     )
 
-    format_percentage_axis(axes)
+    format_percentage_axis(
+        axes
+    )
 
     return figure, axes
 
@@ -1094,6 +1340,9 @@ def plot_return_distribution(
     *,
     bins: int = 40,
     title: str = "Distribution of Monthly Gold Returns",
+    subtitle: str | None = (
+        DEFAULT_RETURN_DISTRIBUTION_SUBTITLE
+    ),
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
@@ -1110,25 +1359,28 @@ def plot_return_distribution(
             Number of histogram intervals.
 
         title:
-            Title displayed above the chart.
+            Primary chart title.
+
+        subtitle:
+            Optional descriptive subtitle. Pass None to omit it.
 
         figure_size:
             Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
+        A tuple containing the styled Matplotlib Figure and Axes.
 
     Raises:
         TypeError:
             If bins is not an integer.
 
         ValueError:
-            If bins is below one or no monthly returns exist.
+            If bins is less than one or no returns exist.
     """
 
-    if isinstance(bins, bool) or not isinstance(
-        bins,
-        int,
+    if (
+        isinstance(bins, bool)
+        or not isinstance(bins, int)
     ):
         raise TypeError(
             "bins must be an integer."
@@ -1156,20 +1408,30 @@ def plot_return_distribution(
     axes.hist(
         monthly_returns.values,
         bins=bins,
+        color=NEUTRAL_RETURN_COLOR,
+        alpha=DEFAULT_PERCENTAGE_FILL_ALPHA,
         label="Monthly Returns",
     )
 
     axes.axvline(
         x=0,
-        linewidth=1,
+        color=REFERENCE_LINE_COLOR,
+        linewidth=DEFAULT_REFERENCE_LINE_WIDTH,
         linestyle="--",
+        label="Zero Return",
     )
 
     apply_standard_formatting(
+        figure,
         axes,
         title=title,
+        subtitle=subtitle,
         x_label="Monthly Return",
         y_label="Frequency",
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper right",
+        apply_tight_layout=True,
     )
 
     format_percentage_axis(
@@ -1189,6 +1451,7 @@ def plot_rolling_average(
     window: int = DEFAULT_ROLLING_WINDOW,
     *,
     title: str = DEFAULT_ROLLING_AVERAGE_TITLE,
+    subtitle: str | None = None,
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
@@ -1205,13 +1468,17 @@ def plot_rolling_average(
             Number of monthly observations in the rolling window.
 
         title:
-            Title displayed above the chart.
+            Primary chart title.
+
+        subtitle:
+            Optional subtitle. When omitted, a description of
+            the selected rolling window is generated.
 
         figure_size:
             Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
+        A tuple containing the styled Figure and Axes.
     """
 
     prices = prepare_price_series(
@@ -1225,6 +1492,14 @@ def plot_rolling_average(
         window=window,
     )
 
+    resolved_subtitle = (
+        subtitle
+        if subtitle is not None
+        else DEFAULT_ROLLING_AVERAGE_SUBTITLE.format(
+            window=window
+        )
+    )
+
     figure, axes = create_figure(
         figure_size=figure_size,
     )
@@ -1232,6 +1507,7 @@ def plot_rolling_average(
     axes.plot(
         prices.index,
         prices.values,
+        color=HISTORICAL_PRICE_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
         label=DEFAULT_PRICE_LABEL,
     )
@@ -1239,19 +1515,39 @@ def plot_rolling_average(
     axes.plot(
         rolling_average.index,
         rolling_average.values,
+        color=ROLLING_AVERAGE_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
         label=DEFAULT_ROLLING_AVERAGE_LABEL.format(
             window=window
         ),
     )
 
-    apply_standard_formatting(
-        axes,
-        title=f"{title}: {window}-Month Window",
-        y_label=DEFAULT_ROLLING_Y_AXIS_LABEL,
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
     )
 
-    format_currency_axis(axes)
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
+    )
+
+    apply_standard_formatting(
+        figure,
+        axes,
+        title=f"{title}: {window}-Month Window",
+        subtitle=resolved_subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
+        y_label=DEFAULT_ROLLING_Y_AXIS_LABEL,
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper left",
+        apply_tight_layout=True,
+    )
+
+    format_currency_axis(
+        axes
+    )
 
     return figure, axes
 
@@ -1263,6 +1559,7 @@ def plot_rolling_volatility(
     *,
     annualize: bool = True,
     title: str = DEFAULT_ROLLING_VOLATILITY_TITLE,
+    subtitle: str | None = None,
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
@@ -1282,20 +1579,27 @@ def plot_rolling_volatility(
             Whether to annualize the volatility calculation.
 
         title:
-            Title displayed above the chart.
+            Primary chart title.
+
+        subtitle:
+            Optional subtitle. When omitted, one is generated
+            from the window and annualization setting.
 
         figure_size:
             Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
+        A tuple containing the styled Figure and Axes.
 
     Raises:
         TypeError:
-            If annualize is not a Boolean value.
+            If annualize is not a Boolean.
     """
 
-    if not isinstance(annualize, bool):
+    if not isinstance(
+        annualize,
+        bool,
+    ):
         raise TypeError(
             "annualize must be a Boolean value."
         )
@@ -1325,6 +1629,8 @@ def plot_rolling_volatility(
             DEFAULT_VOLATILITY_Y_AXIS_LABEL
         )
 
+        volatility_type = "annualized"
+
     else:
         series_label = (
             DEFAULT_NON_ANNUALIZED_VOLATILITY_LABEL.format(
@@ -1336,6 +1642,17 @@ def plot_rolling_volatility(
             DEFAULT_NON_ANNUALIZED_VOLATILITY_Y_AXIS_LABEL
         )
 
+        volatility_type = "monthly"
+
+    resolved_subtitle = (
+        subtitle
+        if subtitle is not None
+        else DEFAULT_ROLLING_VOLATILITY_SUBTITLE.format(
+            window=window,
+            volatility_type=volatility_type,
+        )
+    )
+
     figure, axes = create_figure(
         figure_size=figure_size,
     )
@@ -1343,17 +1660,37 @@ def plot_rolling_volatility(
     axes.plot(
         valid_volatility.index,
         valid_volatility.values,
+        color=VOLATILITY_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
         label=series_label,
     )
 
-    apply_standard_formatting(
-        axes,
-        title=f"{title}: {window}-Month Window",
-        y_label=y_axis_label,
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
     )
 
-    format_percentage_axis(axes)
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
+    )
+
+    apply_standard_formatting(
+        figure,
+        axes,
+        title=f"{title}: {window}-Month Window",
+        subtitle=resolved_subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
+        y_label=y_axis_label,
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper left",
+        apply_tight_layout=True,
+    )
+
+    format_percentage_axis(
+        axes
+    )
 
     return figure, axes
 
@@ -1364,13 +1701,11 @@ def plot_rolling_return(
     window: int = DEFAULT_ROLLING_WINDOW,
     *,
     title: str = DEFAULT_ROLLING_RETURN_TITLE,
+    subtitle: str | None = None,
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
     Plot percentage returns measured across rolling periods.
-
-    A 12-month window compares each price with the price
-    12 monthly observations earlier.
 
     Args:
         data:
@@ -1383,13 +1718,17 @@ def plot_rolling_return(
             Number of periods across which return is measured.
 
         title:
-            Title displayed above the chart.
+            Primary chart title.
+
+        subtitle:
+            Optional subtitle. When omitted, one is generated
+            from the selected rolling window.
 
         figure_size:
             Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
+        A tuple containing the styled Figure and Axes.
     """
 
     rolling_return = calculate_rolling_return(
@@ -1405,6 +1744,14 @@ def plot_rolling_return(
             "No rolling return values are available to plot."
         )
 
+    resolved_subtitle = (
+        subtitle
+        if subtitle is not None
+        else DEFAULT_ROLLING_RETURN_SUBTITLE.format(
+            window=window
+        )
+    )
+
     figure, axes = create_figure(
         figure_size=figure_size,
     )
@@ -1412,6 +1759,7 @@ def plot_rolling_return(
     axes.plot(
         valid_returns.index,
         valid_returns.values,
+        color=ROLLING_RETURN_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
         label=DEFAULT_ROLLING_RETURN_LABEL.format(
             window=window
@@ -1420,17 +1768,38 @@ def plot_rolling_return(
 
     axes.axhline(
         y=0,
+        color=REFERENCE_LINE_COLOR,
         linewidth=DEFAULT_REFERENCE_LINE_WIDTH,
         linestyle="--",
+        label="Zero Return",
+    )
+
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
+    )
+
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
     )
 
     apply_standard_formatting(
+        figure,
         axes,
         title=f"{title}: {window}-Month Window",
+        subtitle=resolved_subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
         y_label=DEFAULT_ROLLING_RETURN_Y_AXIS_LABEL,
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper left",
+        apply_tight_layout=True,
     )
 
-    format_percentage_axis(axes)
+    format_percentage_axis(
+        axes
+    )
 
     return figure, axes
 
@@ -1441,13 +1810,12 @@ def plot_rolling_drawdown(
     window: int = DEFAULT_ROLLING_WINDOW,
     *,
     title: str = DEFAULT_ROLLING_DRAWDOWN_TITLE,
+    subtitle: str | None = None,
+    show_deepest_drawdown: bool = True,
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
     Plot each price's decline from its rolling-window high.
-
-    A value of -0.15 means the current price is 15% below
-    the highest price observed during the rolling window.
 
     Args:
         data:
@@ -1460,14 +1828,33 @@ def plot_rolling_drawdown(
             Number of monthly observations in the rolling window.
 
         title:
-            Title displayed above the chart.
+            Primary chart title.
+
+        subtitle:
+            Optional subtitle. When omitted, one is generated
+            from the selected rolling window.
+
+        show_deepest_drawdown:
+            Whether to annotate the most negative drawdown.
 
         figure_size:
             Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
+        A tuple containing the styled Figure and Axes.
+
+    Raises:
+        TypeError:
+            If show_deepest_drawdown is not a Boolean value.
     """
+
+    if not isinstance(
+        show_deepest_drawdown,
+        bool,
+    ):
+        raise TypeError(
+            "show_deepest_drawdown must be a Boolean value."
+        )
 
     rolling_drawdown = calculate_rolling_drawdown(
         data=data,
@@ -1482,6 +1869,14 @@ def plot_rolling_drawdown(
             "No rolling drawdown values are available to plot."
         )
 
+    resolved_subtitle = (
+        subtitle
+        if subtitle is not None
+        else DEFAULT_ROLLING_DRAWDOWN_SUBTITLE.format(
+            window=window
+        )
+    )
+
     figure, axes = create_figure(
         figure_size=figure_size,
     )
@@ -1489,6 +1884,7 @@ def plot_rolling_drawdown(
     axes.plot(
         valid_drawdown.index,
         valid_drawdown.values,
+        color=DRAWDOWN_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
         label=DEFAULT_ROLLING_DRAWDOWN_LABEL.format(
             window=window
@@ -1499,21 +1895,57 @@ def plot_rolling_drawdown(
         valid_drawdown.index,
         valid_drawdown.values,
         0,
+        color=DRAWDOWN_COLOR,
         alpha=DEFAULT_PERCENTAGE_FILL_ALPHA,
     )
 
     axes.axhline(
         y=0,
+        color=REFERENCE_LINE_COLOR,
         linewidth=DEFAULT_REFERENCE_LINE_WIDTH,
+        linestyle="--",
+        label="Rolling High",
+    )
+
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
+    )
+
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
     )
 
     apply_standard_formatting(
+        figure,
         axes,
         title=f"{title}: {window}-Month Window",
+        subtitle=resolved_subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
         y_label=DEFAULT_ROLLING_DRAWDOWN_Y_AXIS_LABEL,
+        show_grid=True,
+        show_legend=True,
+        legend_location="lower left",
+        apply_tight_layout=True,
     )
 
-    format_percentage_axis(axes)
+    format_percentage_axis(
+        axes
+    )
+
+    if show_deepest_drawdown:
+        annotate_low_value(
+            axes,
+            valid_drawdown,
+            prefix="Deepest Drawdown",
+            value_format="percentage",
+            marker_color=DRAWDOWN_COLOR,
+            offset=(
+                12,
+                -30,
+            ),
+        )
 
     return figure, axes
 
@@ -1524,13 +1956,11 @@ def plot_rolling_high_low(
     window: int = DEFAULT_ROLLING_WINDOW,
     *,
     title: str = DEFAULT_ROLLING_HIGH_LOW_TITLE,
+    subtitle: str | None = None,
     figure_size: tuple[float, float] = DEFAULT_FIGURE_SIZE,
 ) -> tuple[Figure, Axes]:
     """
     Plot gold prices with their rolling highs and lows.
-
-    The area between the rolling high and rolling low shows
-    the price range observed within each rolling window.
 
     Args:
         data:
@@ -1543,13 +1973,17 @@ def plot_rolling_high_low(
             Number of monthly observations in the rolling window.
 
         title:
-            Title displayed above the chart.
+            Primary chart title.
+
+        subtitle:
+            Optional subtitle. When omitted, one is generated
+            from the selected rolling window.
 
         figure_size:
             Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
+        A tuple containing the styled Figure and Axes.
     """
 
     prices = prepare_price_series(
@@ -1583,6 +2017,14 @@ def plot_rolling_high_low(
             "to plot."
         )
 
+    resolved_subtitle = (
+        subtitle
+        if subtitle is not None
+        else DEFAULT_ROLLING_HIGH_LOW_SUBTITLE.format(
+            window=window
+        )
+    )
+
     figure, axes = create_figure(
         figure_size=figure_size,
     )
@@ -1590,6 +2032,7 @@ def plot_rolling_high_low(
     axes.plot(
         prices.index,
         prices.values,
+        color=HISTORICAL_PRICE_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
         label=DEFAULT_PRICE_SERIES_LABEL,
     )
@@ -1597,6 +2040,7 @@ def plot_rolling_high_low(
     axes.plot(
         rolling_range.index,
         rolling_range["Rolling High"],
+        color=ROLLING_HIGH_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
         label=DEFAULT_ROLLING_HIGH_LABEL.format(
             window=window
@@ -1606,6 +2050,7 @@ def plot_rolling_high_low(
     axes.plot(
         rolling_range.index,
         rolling_range["Rolling Low"],
+        color=ROLLING_LOW_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
         label=DEFAULT_ROLLING_LOW_LABEL.format(
             window=window
@@ -1616,16 +2061,37 @@ def plot_rolling_high_low(
         rolling_range.index,
         rolling_range["Rolling Low"],
         rolling_range["Rolling High"],
+        color=ROLLING_RANGE_COLOR,
         alpha=DEFAULT_RANGE_FILL_ALPHA,
+        label=f"{window}-Month Price Range",
+    )
+
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
+    )
+
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
     )
 
     apply_standard_formatting(
+        figure,
         axes,
         title=f"{title}: {window}-Month Window",
+        subtitle=resolved_subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
         y_label=DEFAULT_ROLLING_HIGH_LOW_Y_AXIS_LABEL,
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper left",
+        apply_tight_layout=True,
     )
 
-    format_currency_axis(axes)
+    format_currency_axis(
+        axes
+    )
 
     return figure, axes
 
@@ -1647,18 +2113,18 @@ def plot_forecast(
         DEFAULT_FORECAST_HISTORY_YEARS
     ),
     title: str = DEFAULT_FORECAST_TITLE,
+    subtitle: str | None = None,
+    show_disclaimer: bool = True,
+    show_projected_value: bool = True,
+    source_note: str | None = None,
+    watermark: str | None = None,
     figure_size: tuple[float, float] = (
         DEFAULT_FIGURE_SIZE
     ),
 ) -> tuple[Figure, Axes]:
     """
-    Plot recent historical prices followed by one
-    hypothetical forecast scenario.
-
-    The forecast is generated by the analytics layer using
-    a constant annual growth-rate assumption. This function
-    is responsible only for selecting the visible historical
-    period and rendering the chart.
+    Plot historical gold prices followed by one hypothetical
+    compound-growth forecast.
 
     Args:
         data:
@@ -1676,26 +2142,33 @@ def plot_forecast(
 
         history_years:
             Number of recent historical years to display.
-            When None, the complete historical series is
-            shown.
+            When None, the complete historical series is shown.
 
         title:
-            Title displayed above the chart.
+            Primary chart title.
+
+        subtitle:
+            Optional subtitle. When omitted, one is generated
+            from the forecast period and growth assumption.
+
+        show_disclaimer:
+            Whether to display the forecast disclaimer.
+
+        show_projected_value:
+            Whether to annotate the final projected value.
+
+        source_note:
+            Optional source or attribution text displayed along
+            the bottom of the Figure.
+
+        watermark:
+            Optional subtle watermark displayed inside the Axes.
 
         figure_size:
-            Matplotlib figure dimensions as
-            (width, height).
+            Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
-
-    Raises:
-        TypeError:
-            If history_years is not an integer or None.
-
-        ValueError:
-            If history_years is less than one or no valid
-            historical prices are available.
+        A tuple containing the styled Figure and Axes.
     """
 
     if history_years is not None:
@@ -1711,6 +2184,22 @@ def plot_forecast(
             raise ValueError(
                 "history_years must be at least 1."
             )
+
+    if not isinstance(
+        show_disclaimer,
+        bool,
+    ):
+        raise TypeError(
+            "show_disclaimer must be a Boolean value."
+        )
+
+    if not isinstance(
+        show_projected_value,
+        bool,
+    ):
+        raise TypeError(
+            "show_projected_value must be a Boolean value."
+        )
 
     prices = prepare_price_series(
         data=data,
@@ -1761,6 +2250,15 @@ def plot_forecast(
         ]
     )
 
+    resolved_subtitle = (
+        subtitle
+        if subtitle is not None
+        else DEFAULT_FORECAST_SUBTITLE.format(
+            forecast_years=forecast_years,
+            growth_rate=annual_growth_rate,
+        )
+    )
+
     figure, axes = create_figure(
         figure_size=figure_size,
     )
@@ -1768,6 +2266,7 @@ def plot_forecast(
     axes.plot(
         visible_history.index,
         visible_history.values,
+        color=HISTORICAL_PRICE_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
         label=DEFAULT_FORECAST_HISTORY_LABEL,
     )
@@ -1775,6 +2274,7 @@ def plot_forecast(
     axes.plot(
         connected_forecast.index,
         connected_forecast.values,
+        color=FORECAST_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
         linestyle=DEFAULT_FORECAST_LINE_STYLE,
         marker="o",
@@ -1788,22 +2288,103 @@ def plot_forecast(
         ),
     )
 
-    axes.axvline(
-        x=forecast_boundary,
-        linewidth=DEFAULT_FORECAST_BOUNDARY_WIDTH,
-        linestyle=DEFAULT_FORECAST_BOUNDARY_STYLE,
+    annotate_vertical_event(
+        axes,
+        x_value=forecast_boundary,
         label=DEFAULT_FORECAST_BOUNDARY_LABEL,
+        line_color=FORECAST_BOUNDARY_COLOR,
+        line_style=DEFAULT_FORECAST_BOUNDARY_STYLE,
+    )
+
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
+    )
+
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
     )
 
     apply_standard_formatting(
+        figure,
         axes,
         title=title,
+        subtitle=resolved_subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
         y_label=DEFAULT_FORECAST_Y_AXIS_LABEL,
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper left",
+        apply_tight_layout=False,
     )
 
-    format_currency_axis(axes)
+    format_currency_axis(
+        axes
+    )
 
-    figure.tight_layout()
+    if show_projected_value:
+        annotate_latest_value(
+            axes,
+            forecast,
+            prefix=(
+                f"Projected {forecast_years}-Year Value"
+            ),
+            value_format="currency",
+            marker_color=FORECAST_COLOR,
+            offset=(
+                -150,
+                16,
+            ),
+        )
+
+    if watermark is not None:
+        add_watermark(
+            axes,
+            watermark,
+        )
+
+    if show_disclaimer:
+        figure.text(
+            0.01,
+            0.01,
+            DEFAULT_FORECAST_DISCLAIMER,
+            color=SECONDARY_TEXT_COLOR,
+            fontsize=8,
+            horizontalalignment="left",
+            verticalalignment="bottom",
+        )
+
+    source_note_y_position = (
+        0.028
+        if show_disclaimer
+        else 0.01
+    )
+
+    if source_note is not None:
+        add_figure_source_note(
+            figure,
+            source_note,
+            y_position=source_note_y_position,
+        )
+
+    bottom_margin = 0.0
+
+    if show_disclaimer:
+        bottom_margin = 0.04
+
+    if source_note is not None:
+        bottom_margin = 0.07 if show_disclaimer else 0.04
+
+    figure.tight_layout(
+        pad=1.5,
+        rect=(
+            0.0,
+            bottom_margin,
+            1.0,
+            1.0,
+        ),
+    )
 
     return figure, axes
 
@@ -1820,16 +2401,17 @@ def plot_forecast_scenarios(
         DEFAULT_FORECAST_HISTORY_YEARS
     ),
     title: str = DEFAULT_FORECAST_SCENARIO_TITLE,
+    subtitle: str | None = None,
+    show_disclaimer: bool = True,
+    source_note: str | None = None,
+    watermark: str | None = None,
     figure_size: tuple[float, float] = (
         DEFAULT_FIGURE_SIZE
     ),
 ) -> tuple[Figure, Axes]:
     """
-    Plot recent historical prices followed by multiple
-    hypothetical forecast scenarios.
-
-    Each scenario is generated by the analytics layer from
-    a separate annual growth-rate assumption.
+    Plot historical prices followed by multiple hypothetical
+    forecast scenarios.
 
     Args:
         data:
@@ -1840,35 +2422,37 @@ def plot_forecast_scenarios(
 
         growth_rates:
             Mapping of scenario names to annual growth rates.
-
-            When omitted, the default conservative,
-            expected, and optimistic scenarios are used.
+            When omitted, the default scenarios are used.
 
         forecast_years:
             Number of future years to display.
 
         history_years:
             Number of recent historical years to display.
-            When None, the complete historical series is
-            shown.
+            When None, the complete historical series is shown.
 
         title:
-            Title displayed above the chart.
+            Primary chart title.
+
+        subtitle:
+            Optional subtitle. When omitted, one is generated
+            from the forecast horizon.
+
+        show_disclaimer:
+            Whether to display the forecast disclaimer.
+
+        source_note:
+            Optional source or attribution text displayed along
+            the bottom of the Figure.
+
+        watermark:
+            Optional subtle watermark displayed inside the Axes.
 
         figure_size:
-            Matplotlib figure dimensions as
-            (width, height).
+            Matplotlib figure dimensions as (width, height).
 
     Returns:
-        A tuple containing the Matplotlib Figure and Axes.
-
-    Raises:
-        TypeError:
-            If history_years is not an integer or None.
-
-        ValueError:
-            If history_years is less than one or no valid
-            historical prices are available.
+        A tuple containing the styled Figure and Axes.
     """
 
     if history_years is not None:
@@ -1884,6 +2468,14 @@ def plot_forecast_scenarios(
             raise ValueError(
                 "history_years must be at least 1."
             )
+
+    if not isinstance(
+        show_disclaimer,
+        bool,
+    ):
+        raise TypeError(
+            "show_disclaimer must be a Boolean value."
+        )
 
     prices = prepare_price_series(
         data=data,
@@ -1917,18 +2509,24 @@ def plot_forecast_scenarios(
             >= history_start_date
         ]
 
-    scenario_forecasts = (
-        generate_forecast_scenarios(
-            price_series=valid_prices,
-            growth_rates=growth_rates,
-            years=forecast_years,
-        )
+    scenario_forecasts = generate_forecast_scenarios(
+        price_series=valid_prices,
+        growth_rates=growth_rates,
+        years=forecast_years,
     )
 
     resolved_growth_rates = (
         DEFAULT_FORECAST_SCENARIOS
         if growth_rates is None
         else growth_rates
+    )
+
+    resolved_subtitle = (
+        subtitle
+        if subtitle is not None
+        else DEFAULT_FORECAST_SCENARIO_SUBTITLE.format(
+            forecast_years=forecast_years
+        )
     )
 
     forecast_boundary = valid_prices.index[-1]
@@ -1940,18 +2538,27 @@ def plot_forecast_scenarios(
     axes.plot(
         visible_history.index,
         visible_history.values,
+        color=HISTORICAL_PRICE_COLOR,
         linewidth=DEFAULT_LINE_WIDTH,
         label=DEFAULT_FORECAST_HISTORY_LABEL,
     )
 
-    for scenario_name in (
+    default_scenario_colors = {
+        "Conservative": (
+            FORECAST_CONSERVATIVE_COLOR
+        ),
+        "Expected": FORECAST_BASE_COLOR,
+        "Optimistic": (
+            FORECAST_OPTIMISTIC_COLOR
+        ),
+    }
+
+    for scenario_index, scenario_name in enumerate(
         scenario_forecasts.columns
     ):
-        scenario_series = (
-            scenario_forecasts[
-                scenario_name
-            ]
-        )
+        scenario_series = scenario_forecasts[
+            scenario_name
+        ]
 
         connected_scenario = pd.concat(
             [
@@ -1966,9 +2573,20 @@ def plot_forecast_scenarios(
             scenario_name
         ]
 
+        scenario_color = (
+            default_scenario_colors.get(
+                scenario_name,
+                SCENARIO_COLORS[
+                    scenario_index
+                    % len(SCENARIO_COLORS)
+                ],
+            )
+        )
+
         axes.plot(
             connected_scenario.index,
             connected_scenario.values,
+            color=scenario_color,
             linewidth=DEFAULT_LINE_WIDTH,
             linestyle=DEFAULT_FORECAST_LINE_STYLE,
             marker="o",
@@ -1984,21 +2602,87 @@ def plot_forecast_scenarios(
             ),
         )
 
-    axes.axvline(
-        x=forecast_boundary,
-        linewidth=DEFAULT_FORECAST_BOUNDARY_WIDTH,
-        linestyle=DEFAULT_FORECAST_BOUNDARY_STYLE,
+    annotate_vertical_event(
+        axes,
+        x_value=forecast_boundary,
         label=DEFAULT_FORECAST_BOUNDARY_LABEL,
+        line_color=FORECAST_BOUNDARY_COLOR,
+        line_style=DEFAULT_FORECAST_BOUNDARY_STYLE,
+    )
+
+    axes.xaxis.set_major_locator(
+        mdates.AutoDateLocator()
+    )
+
+    axes.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(
+            axes.xaxis.get_major_locator()
+        )
     )
 
     apply_standard_formatting(
+        figure,
         axes,
         title=title,
+        subtitle=resolved_subtitle,
+        x_label=DEFAULT_X_AXIS_LABEL,
         y_label=DEFAULT_FORECAST_Y_AXIS_LABEL,
+        show_grid=True,
+        show_legend=True,
+        legend_location="upper left",
+        apply_tight_layout=False,
     )
 
-    format_currency_axis(axes)
+    format_currency_axis(
+        axes
+    )
 
-    figure.tight_layout()
+    if watermark is not None:
+        add_watermark(
+            axes,
+            watermark,
+        )
+
+    if show_disclaimer:
+        figure.text(
+            0.01,
+            0.01,
+            DEFAULT_FORECAST_DISCLAIMER,
+            color=SECONDARY_TEXT_COLOR,
+            fontsize=8,
+            horizontalalignment="left",
+            verticalalignment="bottom",
+        )
+
+    source_note_y_position = (
+        0.028
+        if show_disclaimer
+        else 0.01
+    )
+
+    if source_note is not None:
+        add_figure_source_note(
+            figure,
+            source_note,
+            y_position=source_note_y_position,
+        )
+
+    bottom_margin = 0.0
+
+    if show_disclaimer:
+        bottom_margin = 0.04
+
+    if source_note is not None:
+        bottom_margin = 0.07 if show_disclaimer else 0.04
+
+    figure.tight_layout(
+        pad=1.5,
+        rect=(
+            0.0,
+            bottom_margin,
+            1.0,
+            1.0,
+        ),
+    )
 
     return figure, axes
